@@ -243,6 +243,33 @@ export interface PageOptions {
   /** Fail the browser's WebGL probe, for the degraded-renderer scenarios. */
   readonly noWebgl?: boolean
   readonly viewport?: { width: number; height: number }
+  /**
+   * Path prefixes on THIS surface's own origin that belong to the API rather than to the bundle.
+   *
+   * ══════════════════════════════════════════════════════════════════════════════════════════
+   * THIS OPTION EXISTS BECAUSE THE TEMPLATE'S ASSUMPTION IS FALSE FOR THIS SURFACE, AND THE
+   * ASSUMPTION IS WRITTEN DOWN IN THE ROUTE HANDLER BELOW.
+   *
+   * The template says: "Every API this estate's frontends call is cross-origin from a surface
+   * served on 127.0.0.1 … So there is nothing a scenario legitimately needs to stub on this
+   * origin." That is true of every frontend it was written for, and it is exactly wrong here.
+   *
+   * `beacon-web` shares one hostname with micro-beacon on purpose — `apiBase()` is the empty
+   * string and every read is RELATIVE — because Beacon sends no `access-control-*` header and
+   * answers 404 to a preflight, so a cross-origin base is one this page cannot use at all. With
+   * the template's unconditional passthrough, every `/v1` read went to the static file server and
+   * 404'd, and every scenario failed with "this surface failed to serve its own resources". That
+   * is the harness being RIGHT about what it saw and wrong about what it should have done.
+   *
+   * The split is not invented for the test. It is the same split nginx.conf makes: `/v1`, `/api`,
+   * `/metrics`, `/livez` and `/readyz` belong to the service, everything else to the bundle. So
+   * the scenarios pass `SERVICE_PREFIXES` from `src/lib/routes.ts`, and the ambiguity the template
+   * removed by banning same-origin stubs is removed here by naming exactly which prefixes are the
+   * API — a route the app owns, such as `/journeys`, is still a top-level navigation and still
+   * goes to the surface.
+   * ══════════════════════════════════════════════════════════════════════════════════════════
+   */
+  readonly apiPrefixes?: readonly string[]
 }
 
 function matches(pattern: string, req: SentRequest, url: URL): boolean {
@@ -295,6 +322,15 @@ export interface Session {
   readonly origin: string
   /** The address that was navigated to. Its own status is `status`, not a resource failure. */
   readonly document: string
+  /**
+   * The same-origin prefixes this scenario declared to be the API rather than the bundle.
+   *
+   * Carried on the session so `assertMounted` can tell them apart. Without it, a scenario that
+   * DELIBERATELY arranges an unreachable API on this surface's own origin trips the
+   * "failed to serve its own resources" check — which is the correct check for every other
+   * frontend in the estate and wrong for the one whose API shares its hostname.
+   */
+  readonly apiPrefixes: readonly string[]
   /** Everything the page sent that was not one of its own static assets. */
   apiCalls(): SentRequest[]
   /** Bodies the bundle posted to Lantern's browser ingest. */
@@ -448,7 +484,14 @@ export async function renderOnlyWithStubbedNetwork(
     // `resolveApiBase` compares origins and the registry resolves each service to its own dev
     // port. So there is nothing a scenario legitimately needs to stub on this origin, and the
     // ambiguity is worth removing rather than documenting.
-    if (sent.url.startsWith(origin)) {
+    //
+    // …EXCEPT the prefixes a scenario has named as belonging to the API. See `apiPrefixes` above:
+    // this surface is served from the SAME origin as micro-beacon by design, so the template's
+    // unconditional passthrough sent every `/v1` read to the static file server.
+    const isApiPath = (options.apiPrefixes ?? []).some(
+      (prefix) => url.pathname === `/${prefix}` || url.pathname.startsWith(`/${prefix}/`),
+    )
+    if (sent.url.startsWith(origin) && !isApiPath) {
       await route.continue()
       return
     }
@@ -510,6 +553,7 @@ export async function renderOnlyWithStubbedNetwork(
     context,
     status: response?.status() ?? 0,
     document: target.split('#')[0] ?? target,
+    apiPrefixes: options.apiPrefixes ?? [],
     apiCalls: () => requests.filter((r) => !isOwnAsset(r.url, origin)),
     reported: () => reported,
     origin,
@@ -572,9 +616,18 @@ export async function assertMounted(session: Session, options: MountOptions = {}
   // The document itself is excluded: a `navigation` scenario opens an address that MUST answer
   // 404, and Chromium logs that to the console like any other non-2xx. Its status is asserted
   // directly, as `session.status`.
-  const ownFailures = collected.resourceErrors.filter(
-    (e) => e.startsWith(session.origin) && !e.startsWith(`${session.document} —`),
-  )
+  //
+  // …and NOT a same-origin path the scenario declared to be the API. On this surface the bundle
+  // and micro-beacon share one origin by design, so a stubbed 503 or an aborted read lands here
+  // looking exactly like a missing asset. Naming the prefixes keeps the check sharp for the
+  // things it exists to catch — a stylesheet or a chunk that 404s — without it firing on the
+  // scenario's own arrangement.
+  const ownFailures = collected.resourceErrors.filter((e) => {
+    if (!e.startsWith(session.origin)) return false
+    if (e.startsWith(`${session.document} —`)) return false
+    const path = e.slice(session.origin.length)
+    return !session.apiPrefixes.some((p) => path === `/${p}` || path.startsWith(`/${p}/`) || path.startsWith(`/${p}?`))
+  })
   if (ownFailures.length > 0) {
     throw new Error(`this surface failed to serve its own resources:\n  ${ownFailures.join('\n  ')}`)
   }
