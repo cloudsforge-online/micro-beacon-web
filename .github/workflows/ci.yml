@@ -205,11 +205,20 @@ jobs:
         with: { path: beacon-web }
       # Temporary: the sibling the `link:` dependency and the Dockerfile's `uipkg` context resolve
       # against, until @cloudsforge/ui is published.
+      #
+      # `|| github.token` IS LOAD-BEARING FOR A NEW REPOSITORY. `ESTATE_READ_TOKEN` is not set on a
+      # repository that has just been created, so the expression renders the EMPTY STRING — and
+      # checkout with an empty token does not fall back to the job token, it authenticates as
+      # nobody and fails. This was not reasoned about: micro-lantern-web, created alongside this
+      # one, went red on exactly this step on its first push. micro-ui is public, so the job token
+      # suffices; the secret stays first so re-privatising that repository still works. The
+      # reusable workflow already had this fallback for the same checkout
+      # (`secrets.estate_token || github.token`) — only the bespoke copy here lacked it.
       - uses: actions/checkout@v4
         with:
           repository: cloudsforge-online/micro-ui
           path: ui
-          token: ${{ secrets.ESTATE_READ_TOKEN }}
+          token: ${{ secrets.ESTATE_READ_TOKEN || github.token }}
 
       - uses: docker/setup-buildx-action@v3
       - name: Build the image
