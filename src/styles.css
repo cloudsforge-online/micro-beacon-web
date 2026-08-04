@@ -1,0 +1,704 @@
+/*
+ * beacon-web's own rules.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * THERE IS NOT ONE COLOUR VALUE IN THIS FILE.
+ *
+ * No hex literal, no `rgb()`, no named colour. Every colour is `var(--cf-*)` from
+ * @cloudsforge/ui/tokens.css, which main.tsx imports before this file. Three surfaces in this
+ * estate rendered completely unstyled in a real browser precisely because tokens were delivered
+ * and never consumed, while their own suites stayed green — so `test/tokens.test.ts` greps this
+ * file for a literal and fails on one.
+ *
+ * The palette used here:
+ *
+ *   surfaces   --cf-bg, --cf-bg-raised, --cf-surface, --cf-line, --cf-line-strong
+ *   text       --cf-fg, --cf-fg-dim, --cf-fg-mute
+ *   states     --cf-viz-good, --cf-viz-warn, --cf-viz-crit  (the RESERVED three)
+ *   spacing    --cf-space-*, --cf-radius*, --cf-text-*
+ *
+ * ── AND `--cf-accent` APPEARS NOWHERE IN A VERDICT RULE, WHICH IS THE POINT ────────────────────
+ *
+ * This surface's accent IS `--cf-viz-good`'s value: signal green, deliberately the chart `good`
+ * step (`ui/packages/ui/src/tokens.css:604-613`). So a verdict drawn in `var(--cf-accent)` would
+ * be green whatever the verdict said, and the headline verdict on this app's landing page is
+ * usually `refuse`. The registry states the constraint in the entry itself
+ * (`ui/packages/ui/src/surfaces.ts:392-395`): "Beacon's own pages still reserve green/amber/red
+ * for probe verdicts."
+ *
+ * `test/verdict.test.ts` reads this file and fails if `--cf-accent` appears inside any rule whose
+ * selector mentions `bw-badge`, `bw-verdict` or `bw-tone`. The accent is still used — for the
+ * focus ring, the active nav underline and the primary button, which are chrome and carry no
+ * verdict.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+
+/* ---- layout ---------------------------------------------------------- */
+
+.bw-skip {
+  position: absolute;
+  left: -9999px;
+}
+.bw-skip:focus {
+  left: var(--cf-space-md);
+  top: var(--cf-space-md);
+  z-index: 100;
+  padding: var(--cf-space-xs) var(--cf-space-sm);
+  background: var(--cf-bg-raised);
+  color: var(--cf-fg);
+  border: 1px solid var(--cf-accent);
+  border-radius: var(--cf-radius-sm);
+}
+
+.bw-subnav {
+  position: sticky;
+  /* The bar's own height token, never a number copied out of it. */
+  top: var(--cf-bar-h);
+  z-index: 20;
+  background: var(--cf-bg);
+  border-bottom: 1px solid var(--cf-line);
+}
+.bw-subnav__inner {
+  max-width: var(--cf-max-w);
+  margin: 0 auto;
+  display: flex;
+  gap: var(--cf-space-sm);
+  padding: 0 var(--cf-space-md);
+  overflow-x: auto;
+}
+.bw-subnav__link {
+  padding: var(--cf-space-sm) var(--cf-space-2xs);
+  color: var(--cf-fg-dim);
+  text-decoration: none;
+  font-size: var(--cf-text-sm);
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+}
+.bw-subnav__link:hover {
+  color: var(--cf-fg);
+}
+.bw-subnav__link.is-active {
+  color: var(--cf-fg);
+  /* Chrome, not a verdict: the accent is correct here. */
+  border-bottom-color: var(--cf-accent);
+}
+
+.bw-main {
+  max-width: var(--cf-max-w);
+  margin: 0 auto;
+  padding: var(--cf-space-lg) var(--cf-space-md) var(--cf-space-3xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cf-space-lg);
+}
+
+.bw-page__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cf-space-2xs);
+}
+.bw-page__title {
+  font-family: var(--cf-font-display);
+  font-size: var(--cf-text-3xl);
+  margin: 0;
+  color: var(--cf-fg);
+}
+.bw-page__lead {
+  margin: 0;
+  color: var(--cf-fg-dim);
+  font-size: var(--cf-text-sm);
+  max-width: 72ch;
+}
+
+/* ---- panels ---------------------------------------------------------- */
+
+.bw-panel {
+  background: var(--cf-surface);
+  border: 1px solid var(--cf-line);
+  border-radius: var(--cf-radius);
+  padding: var(--cf-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cf-space-sm);
+}
+.bw-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--cf-space-xs);
+  border-bottom: 1px solid var(--cf-line);
+  padding-bottom: var(--cf-space-xs);
+}
+.bw-panel__title {
+  margin: 0;
+  font-size: var(--cf-text-lg);
+  color: var(--cf-fg);
+}
+.bw-panel__reads {
+  font-size: var(--cf-text-2xs);
+  color: var(--cf-fg-mute);
+}
+
+/* ---- the ask form ---------------------------------------------------- */
+
+.bw-ask {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--cf-space-xs);
+  background: var(--cf-bg-raised);
+  border: 1px solid var(--cf-line);
+  border-radius: var(--cf-radius);
+  padding: var(--cf-space-md);
+}
+.bw-ask__label {
+  font-size: var(--cf-text-sm);
+  color: var(--cf-fg-dim);
+}
+.bw-ask__input {
+  padding: var(--cf-space-xs) var(--cf-space-sm);
+  background: var(--cf-bg);
+  color: var(--cf-fg);
+  border: 1px solid var(--cf-line-strong);
+  border-radius: var(--cf-radius-sm);
+  font-family: var(--cf-font-mono);
+  min-width: 0;
+}
+.bw-ask__input:focus-visible {
+  outline: 2px solid var(--cf-accent);
+  outline-offset: 1px;
+}
+.bw-ask__help {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--cf-text-2xs);
+  color: var(--cf-fg-mute);
+}
+
+/* ---- badges: word, glyph, tone --------------------------------------- */
+
+.bw-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cf-space-3xs);
+  padding: var(--cf-space-3xs) var(--cf-space-xs);
+  border: 1px solid currentColor;
+  border-radius: var(--cf-radius-sm);
+  font-size: var(--cf-text-xs);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.bw-badge__word {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.bw-badge--hero {
+  font-size: var(--cf-text-xl);
+  padding: var(--cf-space-xs) var(--cf-space-sm);
+}
+/* The reserved three, and a fourth that is deliberately NOT one of them. */
+.bw-badge--clear {
+  color: var(--cf-viz-good);
+}
+.bw-badge--caution {
+  color: var(--cf-viz-warn);
+}
+.bw-badge--stop {
+  color: var(--cf-viz-crit);
+}
+/*
+ * `unknown` is drawn in the muted foreground and NOT in any status hue, and that is a decision.
+ * An unknown is not a milder red and not a paler amber — it is the absence of a measurement, and
+ * giving it a place on the good/warn/crit ramp would put it on a scale it does not belong to. Its
+ * glyph is `?` and its word says so; the colour deliberately says nothing.
+ */
+.bw-badge--unknown {
+  color: var(--cf-fg-mute);
+  border-style: dashed;
+}
+.bw-badge--quiet {
+  color: var(--cf-fg-dim);
+}
+
+/* ---- the verdict ----------------------------------------------------- */
+
+.bw-verdict {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cf-space-sm);
+  padding: var(--cf-space-md);
+  border-radius: var(--cf-radius);
+  background: var(--cf-bg-raised);
+  border-left: 4px solid var(--cf-line-strong);
+}
+.bw-verdict--clear {
+  border-left-color: var(--cf-viz-good);
+}
+.bw-verdict--caution {
+  border-left-color: var(--cf-viz-warn);
+}
+.bw-verdict--stop {
+  border-left-color: var(--cf-viz-crit);
+}
+.bw-verdict--unknown {
+  border-left-color: var(--cf-fg-mute);
+  border-left-style: dashed;
+}
+.bw-verdict__meaning {
+  margin: 0;
+  color: var(--cf-fg);
+  font-size: var(--cf-text-md);
+  max-width: 72ch;
+}
+.bw-verdict__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cf-space-md);
+  margin: 0;
+}
+
+.bw-fact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cf-space-3xs);
+}
+.bw-fact__label {
+  font-size: var(--cf-text-2xs);
+  color: var(--cf-fg-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.bw-fact__value {
+  margin: 0;
+  color: var(--cf-fg);
+  font-size: var(--cf-text-sm);
+}
+
+/* ---- reason lists ---------------------------------------------------- */
+
+.bw-reasons {
+  border: 1px solid var(--cf-line);
+  border-radius: var(--cf-radius);
+  padding: var(--cf-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cf-space-sm);
+}
+/* The unknown panel is visually distinct from the known one, in a second channel as well as
+   colour: a dashed border, which no other panel on this surface uses. */
+.bw-reasons--unknown {
+  border-style: dashed;
+  border-color: var(--cf-fg-mute);
+}
+.bw-reasons--known {
+  border-color: var(--cf-viz-crit);
+}
+.bw-reasons--waived {
+  border-color: var(--cf-viz-warn);
+}
+.bw-reasons__title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--cf-space-xs);
+  font-size: var(--cf-text-lg);
+  color: var(--cf-fg);
+}
+.bw-reasons__lead {
+  margin: 0;
+  color: var(--cf-fg-dim);
+  font-size: var(--cf-text-sm);
+  max-width: 72ch;
+}
+.bw-reasons__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cf-space-sm);
+}
+.bw-reason {
+  border-top: 1px solid var(--cf-line);
+  padding-top: var(--cf-space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cf-space-3xs);
+}
+.bw-reason__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--cf-space-xs);
+}
+.bw-reason__subject {
+  color: var(--cf-fg);
+  font-weight: 600;
+}
+.bw-reason__detail {
+  margin: 0;
+  color: var(--cf-fg);
+  font-size: var(--cf-text-sm);
+}
+.bw-reason__meaning {
+  margin: 0;
+  color: var(--cf-fg-mute);
+  font-size: var(--cf-text-xs);
+  max-width: 78ch;
+}
+
+/* ---- the objectives panel -------------------------------------------- */
+
+.bw-noobjectives {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cf-space-sm);
+  align-items: flex-start;
+}
+.bw-noobjectives__detail,
+.bw-noobjectives__why {
+  margin: 0;
+  color: var(--cf-fg);
+  font-size: var(--cf-text-sm);
+  max-width: 78ch;
+}
+.bw-noobjectives__why {
+  color: var(--cf-fg-dim);
+}
+.bw-noobjectives__cites summary {
+  cursor: pointer;
+  color: var(--cf-fg-mute);
+  font-size: var(--cf-text-xs);
+}
+.bw-noobjectives__cites ul {
+  margin: var(--cf-space-xs) 0 0;
+  padding-left: var(--cf-space-md);
+  color: var(--cf-fg-mute);
+  font-size: var(--cf-text-2xs);
+}
+
+.bw-caveat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cf-space-xs);
+}
+.bw-caveat__body {
+  margin: 0;
+  color: var(--cf-fg);
+  font-size: var(--cf-text-sm);
+  max-width: 78ch;
+}
+.bw-caveat__aside {
+  margin: 0;
+  color: var(--cf-fg-mute);
+  font-size: var(--cf-text-xs);
+  max-width: 78ch;
+}
+
+.bw-budgets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cf-space-sm);
+}
+.bw-budget {
+  border: 1px solid var(--cf-line);
+  border-radius: var(--cf-radius-sm);
+  padding: var(--cf-space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cf-space-xs);
+}
+.bw-budget__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cf-space-xs);
+  flex-wrap: wrap;
+}
+.bw-budget__figures,
+.bw-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cf-space-md);
+  margin: 0;
+}
+.bw-budget__figures dt,
+.bw-counts dt {
+  font-size: var(--cf-text-2xs);
+  color: var(--cf-fg-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.bw-budget__figures dd,
+.bw-counts dd {
+  margin: 0;
+  color: var(--cf-fg);
+}
+.bw-budget__none {
+  margin: 0;
+  color: var(--cf-fg-mute);
+  font-size: var(--cf-text-xs);
+}
+
+/* ---- rows ------------------------------------------------------------ */
+
+.bw-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cf-space-sm);
+}
+.bw-row {
+  border-top: 1px solid var(--cf-line);
+  padding-top: var(--cf-space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cf-space-3xs);
+}
+.bw-row__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cf-space-xs);
+}
+.bw-row__title {
+  margin: 0;
+  color: var(--cf-fg);
+  font-size: var(--cf-text-sm);
+}
+.bw-row__meta,
+.bw-row__muted,
+.bw-row__error {
+  margin: 0;
+  color: var(--cf-fg-mute);
+  font-size: var(--cf-text-xs);
+}
+.bw-row__error code {
+  color: var(--cf-fg-dim);
+  overflow-wrap: anywhere;
+}
+.bw-row__group {
+  color: var(--cf-fg-dim);
+}
+
+.bw-tag {
+  font-size: var(--cf-text-2xs);
+  padding: 0 var(--cf-space-3xs);
+  border: 1px solid var(--cf-line-strong);
+  border-radius: var(--cf-radius-sm);
+  color: var(--cf-fg-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.bw-tag--critical {
+  color: var(--cf-fg);
+  border-color: var(--cf-fg-mute);
+}
+.bw-tag--muted {
+  color: var(--cf-viz-warn);
+  border-color: var(--cf-viz-warn);
+}
+
+.bw-filters {
+  display: flex;
+  gap: var(--cf-space-xs);
+  flex-wrap: wrap;
+}
+.bw-filter {
+  padding: var(--cf-space-3xs) var(--cf-space-sm);
+  background: var(--cf-surface);
+  color: var(--cf-fg-dim);
+  border: 1px solid var(--cf-line);
+  border-radius: var(--cf-radius-sm);
+  font-size: var(--cf-text-xs);
+  cursor: pointer;
+}
+.bw-filter.is-active {
+  color: var(--cf-fg);
+  border-color: var(--cf-line-strong);
+  background: var(--cf-bg-raised);
+}
+.bw-filter:focus-visible {
+  outline: 2px solid var(--cf-accent);
+  outline-offset: 1px;
+}
+
+.bw-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cf-space-xs);
+}
+.bw-history__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cf-space-xs);
+  font-size: var(--cf-text-xs);
+  color: var(--cf-fg-mute);
+  border-top: 1px solid var(--cf-line);
+  padding-top: var(--cf-space-xs);
+}
+
+/* ---- notes and states ------------------------------------------------ */
+
+.bw-note {
+  display: flex;
+  gap: var(--cf-space-xs);
+  margin: 0;
+  padding: var(--cf-space-sm);
+  border: 1px solid var(--cf-line);
+  border-radius: var(--cf-radius-sm);
+  color: var(--cf-fg-dim);
+  font-size: var(--cf-text-sm);
+  background: var(--cf-bg-raised);
+}
+.bw-note--warn {
+  border-color: var(--cf-viz-warn);
+  color: var(--cf-fg);
+}
+.bw-note--stop {
+  border-color: var(--cf-viz-crit);
+  color: var(--cf-fg);
+}
+.bw-note__icon {
+  flex: none;
+}
+
+.bw-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--cf-space-2xs);
+  padding: var(--cf-space-lg) var(--cf-space-md);
+  text-align: center;
+  border: 1px dashed var(--cf-line);
+  border-radius: var(--cf-radius);
+  color: var(--cf-fg-dim);
+}
+.bw-state__icon {
+  font-size: var(--cf-text-2xl);
+  color: var(--cf-fg-mute);
+}
+.bw-state__title {
+  margin: 0;
+  color: var(--cf-fg);
+  font-size: var(--cf-text-md);
+}
+.bw-state__hint,
+.bw-state__meta {
+  margin: 0;
+  font-size: var(--cf-text-xs);
+  color: var(--cf-fg-mute);
+  max-width: 68ch;
+}
+.bw-state__action {
+  margin-top: var(--cf-space-xs);
+}
+.bw-state__links {
+  list-style: none;
+  display: flex;
+  gap: var(--cf-space-sm);
+  padding: 0;
+  margin: var(--cf-space-xs) 0 0;
+}
+.bw-state__links a {
+  color: var(--cf-accent-text);
+}
+.bw-state--failed {
+  border-style: solid;
+  border-color: var(--cf-viz-crit);
+}
+.bw-state--failed .bw-state__icon {
+  color: var(--cf-viz-crit);
+}
+.bw-state--invalid {
+  border-style: solid;
+  border-color: var(--cf-viz-warn);
+}
+.bw-state--invalid .bw-state__icon {
+  color: var(--cf-viz-warn);
+}
+
+.bw-spinner {
+  width: 1.1em;
+  height: 1.1em;
+  border: 2px solid var(--cf-line-strong);
+  border-top-color: var(--cf-fg-mute);
+  border-radius: 50%;
+  animation: bw-spin 900ms linear infinite;
+}
+@keyframes bw-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bw-spinner {
+    animation: none;
+  }
+}
+
+/* ---- the signed-out panel -------------------------------------------- */
+
+.bw-signin {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--cf-space-sm);
+  padding: var(--cf-space-xl) var(--cf-space-lg);
+  border: 1px solid var(--cf-line);
+  border-radius: var(--cf-radius-lg);
+  background: var(--cf-bg-raised);
+  max-width: 72ch;
+}
+.bw-signin__glyph {
+  font-size: var(--cf-text-3xl);
+  /* Chrome, not a verdict. This is the surface identifying itself. */
+  color: var(--cf-accent);
+}
+.bw-signin__title {
+  margin: 0;
+  font-family: var(--cf-font-display);
+  font-size: var(--cf-text-2xl);
+  color: var(--cf-fg);
+}
+.bw-signin__lead {
+  margin: 0;
+  color: var(--cf-fg);
+  font-size: var(--cf-text-sm);
+}
+.bw-signin__note,
+.bw-signin__aside {
+  margin: 0;
+  color: var(--cf-fg-mute);
+  font-size: var(--cf-text-xs);
+}
+
+/* ---- small shared bits ------------------------------------------------ */
+
+.bw-code {
+  font-family: var(--cf-font-mono);
+  font-size: 0.95em;
+  overflow-wrap: anywhere;
+}
+.bw-reqid {
+  font-family: var(--cf-font-mono);
+  user-select: all;
+  color: var(--cf-fg);
+}
+.bw-absent {
+  color: var(--cf-fg-mute);
+  font-style: italic;
+}
+.bw-when__age {
+  color: var(--cf-fg-mute);
+}

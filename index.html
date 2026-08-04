@@ -1,0 +1,65 @@
+<!doctype html>
+<!--
+  data-cf-product picks the accent ramp and data-cf-substrate the ash ramp, both from
+  @cloudsforge/ui/tokens.css. They are on <html> and set STATICALLY here rather than by React,
+  because a page that paints before the attributes land flashes the default ember and then
+  changes colour.
+
+  ══════════════════════════════════════════════════════════════════════════════════════════════
+  data-cf-product="beacon" IS CORRECT, AND ITS CONSEQUENCE IS THE MOST IMPORTANT DESIGN
+  CONSTRAINT IN THIS BUNDLE.
+
+  The block exists — `ui/packages/ui/src/tokens.css:607-613` names both `beacon` and `status` —
+  and it is signal green, `#7fae5c`, deliberately the chart `good` step. The registry says why
+  (`ui/packages/ui/src/surfaces.ts:392-395`): "for a status tool the surface agreeing with its
+  healthiest verdict is correct". It then adds the sentence this repository is built around:
+  **"Beacon's own pages still reserve green/amber/red for probe verdicts."**
+
+  So this surface's own accent is the colour of its healthiest answer, while the headline answer
+  on its landing page is frequently `refuse`. Rendering the verdict in `--cf-accent` would make a
+  refusal inherit the page's green. It is therefore forbidden: the verdict panel is drawn in the
+  reserved status tokens only (`--cf-viz-good`, `--cf-viz-warn`, `--cf-viz-crit`), and it says
+  what it is through **word + glyph + tone — three channels, never colour alone**. See the header
+  of src/lib/verdict.ts and the guard in test/verdict.test.ts, which fails if `--cf-accent` is
+  ever applied to a verdict rule in styles.css.
+  ══════════════════════════════════════════════════════════════════════════════════════════════
+
+  data-cf-substrate="warm" because the ash ramp under a green accent should not be a second
+  cool hue; `tokens.css:167` records that the estate's own reading of the two ramps was made on
+  surfaces that set "cool" and on none that set "warm", so this is the one that has had less use
+  and it is chosen on the token file's own terms rather than by copying the template.
+-->
+<html lang="en-GB" data-cf-product="beacon" data-cf-substrate="warm">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="colour-scheme" content="dark light" />
+    <!--
+      The build that produced this bundle. Stamped by the Dockerfile, read by src/lib/obs.ts, and
+      the reason an error report can be pinned to the deploy that introduced it. It is an identity
+      rather than a configuration: it names the artefact, it does not tell it where it is running.
+    -->
+    <meta name="cf-release" content="dev" />
+    <!--
+      The three favicons from `brand/assets/beacon/`. There is NO og card and no `og:` meta block
+      here, and the absence is read off the brand plan rather than forgotten: `brand/plan.ts:43` —
+      "No OG card and no social banner for Admin, Lantern or Beacon." Those surfaces exist to be
+      opened by an operator, not shared. `brand/assets/beacon/` holds no og image, and inventing a
+      meta tag pointing at a file that does not exist is how a surface ships a broken preview.
+      test/brand-chrome.test.ts asserts the absence in both directions.
+    -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/favicon-192x192.png" />
+
+    <!-- Not indexed, and this one is not decoration either: every route here is admin-only and
+         every panel is an operational fact about a live estate. -->
+    <meta name="robots" content="noindex, nofollow" />
+
+    <title>Beacon — release gate</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
