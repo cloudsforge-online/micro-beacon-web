@@ -38,14 +38,16 @@
  * `micro-status-web` reads Beacon too, and its `hosts.ts` opens by saying "THIS APP'S API IS NOT
  * ITS OWN HOST" — it is a bundle at `status.<apex>` reading a document produced at
  * `beacon.<apex>`. This bundle is the other case: it IS Beacon's surface. The registry declares
- * `beacon` with `subdomain: 'beacon'` and `servesUi: false`
- * (`ui/packages/ui/src/surfaces.ts:390-407`), which is the line this repository exists to make
- * false — and `inSwitcher: true` alongside it, which is why an operator can already pick "Beacon"
- * out of the switcher and land on a 404 today. Verified through the real gateway:
+ * `beacon` with `subdomain: 'beacon'` and, since 2026-08-04, `servesUi: true`
+ * — the line this repository existed to make false, made false. Alongside it `inSwitcher: true`,
+ * which used to mean an operator could pick "Beacon" out of the switcher and land on a 404. That
+ * is what this bundle fixed. Verified through the real gateway, before and after:
  *
  *   curl -s --cacert deploy/gateway/certs/ca.crt -o /dev/null -w '%{http_code}' \
  *     https://beacon.cloudsforge.localtest.me/
- *   → 404
+ *   → 404   (before this repository existed)
+ *   → 200   (now, text/html — the router is `cf-web-beacon` at priority 500, with the API
+ *            renamed to `cf-svc-beacon` at 600 so the two cannot shadow each other)
  */
 import { cloudsforgeHosts, type CloudsForgeHosts, type SurfaceKey } from '@cloudsforge/ui'
 

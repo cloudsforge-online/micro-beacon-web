@@ -88,6 +88,7 @@ export const UNKNOWN_CODES: ReadonlySet<ReasonCode> = new Set<ReasonCode>([
   'journey_insufficient_history',
   'error_budget_no_data',
   'conformance_never_run',
+  'conformance_inconclusive',
   'beacon_unavailable',
 ])
 
@@ -362,6 +363,9 @@ export const REASON_MEANING: Readonly<Record<ReasonCode, string>> = {
     'The window holds no observations. Zero observations is not 100% availability: a service ' +
     'nothing has measured has not demonstrated anything (beacon/src/gate.ts:278-281).',
   conformance_never_run: 'No conformance run has ever been recorded, so nothing has been compared.',
+  conformance_inconclusive:
+    "A suite's most recent run was a skip or an error, so nothing was compared. A suite that " +
+    'could not run is not a suite that passed.',
   beacon_unavailable:
     'Beacon could not read its own state, so it could not evaluate anything. It refuses rather ' +
     'than throwing, because a caller might log an exception and carry on (beacon/src/gate.ts:368-374).',

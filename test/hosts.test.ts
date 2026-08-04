@@ -92,10 +92,12 @@ describe('the registry entry this bundle is built against', () => {
     assert.equal(entry.subdomain, 'beacon')
   })
 
-  it('still says servesUi: false — which is the line this repository exists to make false', () => {
-    // Pinned deliberately. When micro-ui flips it, this goes red, and the README's opening claim
-    // has to be rewritten rather than left standing as a stale inherited fact.
-    assert.equal(entry.servesUi, false)
+  it('says servesUi: true — the line this repository existed to make false, made false', () => {
+    // This asserted FALSE until 2026-08-04 and was a deliberate tripwire: when micro-ui flipped it,
+    // this went red so the claim could be rewritten rather than left standing as a stale inherited
+    // fact. It fired, and this is the rewrite. It is pinned in the new direction for the same
+    // reason — a registry that quietly stopped serving this bundle should break the bundle's tests.
+    assert.equal(entry.servesUi, true)
     assert.equal(entry.inSwitcher, true)
     assert.equal(entry.adminOnly, true)
   })

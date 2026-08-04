@@ -89,6 +89,7 @@ export type ReasonCode =
   | 'journey_insufficient_history'
   | 'error_budget_no_data'
   | 'conformance_never_run'
+  | 'conformance_inconclusive'
   | 'beacon_unavailable'
 
 export type Determinacy = 'known' | 'unknown'
