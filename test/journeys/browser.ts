@@ -341,19 +341,25 @@ export interface Session {
  *
  * ── And what these scenarios ARE good for, which is a lot ─────────────────────────────────────
  *
- * Everything downstream of a response: that a list draws one row per record the response carried,
- * that a control stays inoperable until the thing it acts on has actually arrived, that a figure
- * is shown as the API worded it rather than recomputed in the client, that a 503 becomes a banner
- * and a 404 does not. Those are genuine rendering logic, they are cheap, they are deterministic,
- * they run with no estate, and deleting them would be a loss. They are simply not evidence that
- * anything is reachable.
+ * Everything downstream of a response: that a `refuse` is drawn as a verdict rather than as a
+ * failure, that an unreachable Beacon is drawn as neither, that the empty objectives answer
+ * produces the words "no objectives defined" and no figure, and that a signed-out visitor gets a
+ * sign-in panel with **no API request issued at all**. Those are genuine rendering logic, they are
+ * cheap, they are deterministic, they run with no estate, and deleting them would be a loss. They
+ * are simply not evidence that anything is reachable.
  *
- * (Those examples are deliberately generic, and that is the ONE paragraph in this header that
- * differs from the `emberkin-web` and `aetherholm-web` copies, which name scenarios from their
- * own surfaces. This copy is the one `cfctl new` hands to a frontend that does not exist yet, so
- * it can name no surface. Every sentence `test/harness-honesty.test.ts` reads — the name, the
- * three things this cannot see, and `micro-beacon`'s smoke tier — is byte-identical across all
- * of them on purpose, so the guard is the same guard everywhere.)
+ * (That paragraph is the ONE in this header that differs from the `web-template`, `emberkin-web`
+ * and `aetherholm-web` copies, which name scenarios from their own surfaces. Every sentence
+ * `test/harness-honesty.test.ts` reads — the name, the three things this cannot see, and
+ * `micro-beacon`'s smoke tier — is byte-identical across all of them on purpose, so the guard is
+ * the same guard everywhere.
+ *
+ * There is one thing worth saying that only this repository can say. The tier named above as the
+ * one that CAN see reachability lives in the service this bundle is the console for: it is
+ * `beacon/src/browser/smoke.ts`, in `../beacon`. So the honest division of labour here is not an
+ * abstraction — the scenarios in this directory prove what this page RENDERS, and the repository
+ * next door proves that the page is REACHABLE. Neither can do the other's job, and this one must
+ * never be extended to try.)
  *
  * Deliberately does NOT assert anything: a scenario says what it needs, and `assertMounted` below
  * is the shared floor that most of them start from.

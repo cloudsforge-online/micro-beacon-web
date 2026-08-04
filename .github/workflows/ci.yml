@@ -1,0 +1,276 @@
+name: CI
+
+# The estate-wide checks come from micro-org's reusable workflow; the two jobs below are the ones
+# no shared workflow can know about, because they are properties of THIS repository's nginx.conf,
+# entry point and stylesheet.
+#
+# `micro-web-template` explains why `web-ci.yml` had no callers for so long — one missing checkout,
+# because @cloudsforge/ui is consumed as `link:../ui/packages/ui` and the reusable workflow did a
+# single checkout, so `pnpm install` produced a dangling symlink and Typecheck could not resolve a
+# single export. That is fixed upstream, so this repository calls it from day one rather than
+# carrying several hundred lines of bespoke CI.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: cloudsforge-online/micro-org/.github/workflows/web-ci.yml@main
+    with:
+      app: beacon-web
+      # `/objectives` is a real route: src/lib/routes.ts declares it, src/app.tsx renders it and
+      # nginx.conf gives it a location block. It is chosen over the other five deliberately — it
+      # is the page carrying this estate's live defect, so a deploy that cannot serve it on a hard
+      # refresh is one that has hidden the finding. test/routes.test.ts asserts this value matches
+      # DEEP_LINK_PATH, so the two cannot drift.
+      deep-link-path: /objectives
+    secrets:
+      # micro-ui is private; without a contents:read token the sibling checkout 404s, the
+      # `link:../ui/packages/ui` specifier installs as a dangling symlink, and Typecheck cannot
+      # resolve a single @cloudsforge/ui export.
+      estate_token: ${{ secrets.ESTATE_READ_TOKEN }}
+    permissions:
+      contents: read
+      packages: read
+
+  rules:
+    # The estate rules that are cheaper to grep than to review. Each one has been broken at least
+    # once by a change that looked correct in isolation.
+    name: Estate rules this repository adds
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No build-time configuration
+        # Broader than the reusable workflow's version, deliberately. That one matches
+        # `import.meta.env.VITE_*`; this matches `import.meta.env` at all and bare `VITE_`, and it
+        # reads index.html as well as src/. Same rule as test/no-build-time-config.test.ts,
+        # checked again here so it fails even if somebody deletes the test along with the line it
+        # forbids.
+        #
+        # vite.config.ts is deliberately NOT swept: it reads CF_BEACON_ORIGIN to point the DEV
+        # SERVER's proxy at a remapped container, and `vite build` emits nothing from it. The
+        # `define`/`envPrefix` half of the rule below is what covers that file.
+        run: |
+          if grep -rn --include='*.ts' --include='*.tsx' --include='*.html' \
+               -e 'import\.meta\.env' -e 'VITE_' src index.html; then
+            echo "::error::this bundle must read no build-time environment; hosts come from cloudsforgeHosts() at runtime"
+            exit 1
+          fi
+          if grep -nE '^\s*(define|envPrefix)\s*:' vite.config.ts; then
+            echo "::error::vite.config.ts must bake no constant into the bundle"
+            exit 1
+          fi
+          echo "ok: no build-time environment"
+
+      - name: No hard-coded CloudsForge hostname
+        # A literal hostname is a second, unversioned copy of the surface registry, and the copy is
+        # the one that will be wrong.
+        run: |
+          if grep -rn --include='*.ts' --include='*.tsx' 'cloudsforge\.online' src; then
+            echo "::error::resolve hosts through cloudsforgeHosts() rather than naming them"
+            exit 1
+          fi
+          echo "ok: no hard-coded hostname"
+
+      - name: No colour literal in the stylesheet
+        # Three surfaces in this estate rendered completely unstyled in a real browser because
+        # tokens were delivered and never consumed, while their own suites stayed green. Same rule
+        # as test/tokens.test.ts, checked twice for the same reason as the one above.
+        #
+        # The FUNCTION sweep runs against the stylesheet with its comments removed, because that
+        # file opens by saying "No hex literal, no `rgb()`, no named colour" and the first version
+        # of this step went red on a pristine stylesheet, matching its own rationale. The HEX sweep
+        # stays on the raw file: a hex in a comment is a value the next reader pastes into a rule.
+        run: |
+          set -euo pipefail
+          sed 's|/\*|\n&|g; s|\*/|&\n|g' src/styles.css | sed '/\/\*/,/\*\//d' > /tmp/css.effective
+          if grep -nE '#[0-9a-fA-F]{3,8}\b' src/styles.css; then
+            echo "::error::every colour must be var(--cf-*) from @cloudsforge/ui/tokens.css"
+            exit 1
+          fi
+          if grep -nE 'rgba?\(|hsla?\(' /tmp/css.effective; then
+            echo "::error::every colour must be var(--cf-*) from @cloudsforge/ui/tokens.css"
+            exit 1
+          fi
+          echo "ok: no colour literal"
+
+      - name: The verdict never inherits the surface accent
+        # This surface's accent is signal green — deliberately the chart `good` step — and its
+        # headline verdict is usually `refuse`. A verdict drawn in var(--cf-accent) renders a
+        # refusal in the colour of a pass.
+        run: |
+          if awk '/^\.bw-(badge|verdict|tone)/{inrule=1} inrule&&/--cf-accent/{print FILENAME":"NR": "$0; found=1} /^\}/{inrule=0} END{exit !found}' src/styles.css; then
+            echo "::error::a verdict rule uses --cf-accent; a refusal would render green"
+            exit 1
+          fi
+          echo "ok: no verdict wears the accent"
+
+      - name: The SPA fallback keeps its 404
+        # `try_files ... /index.html` in the catch-all location is how an app starts answering 200
+        # for every address that does not exist. Comments are stripped first: nginx.conf's own
+        # header quotes the forbidden directive while explaining why it is forbidden, and a guard
+        # that fires on its own rationale trains people to disable the guard.
+        run: |
+          sed 's/#.*//' nginx.conf > /tmp/nginx.effective
+          if grep -nE 'try_files\s+\$uri\s+(\$uri/\s+)?/index\.html' /tmp/nginx.effective; then
+            echo "::error::unknown paths must 404; serve the shell through error_page 404 /index.html"
+            exit 1
+          fi
+          grep -q 'error_page 404 /index.html' /tmp/nginx.effective
+          echo "ok: the SPA fallback keeps its 404"
+
+      - name: This bundle never writes to the gate
+        # GET /v1/gate does not record; POST /v1/gate is the recording form used at the moment of a
+        # real promotion. A console that recorded on every keystroke would fill gate_decisions with
+        # evaluations nobody made, and the history panel reads that table.
+        #
+        # There are exactly TWO non-GETs in this bundle and neither is a Beacon call: the Nimbus
+        # token refresh and the Lantern browser ingest. Counted rather than pattern-excluded — a
+        # rule that allowed "POST, unless it looks fine" would allow the next one too.
+        # test/beacon.test.ts makes the same assertion and additionally checks both targets.
+        run: |
+          set -euo pipefail
+          n=$(grep -rhoE "method: '(POST|PUT|DELETE|PATCH)'" --include='*.ts' --include='*.tsx' src | wc -l | tr -d ' ')
+          if [ "$n" != "2" ]; then
+            echo "::error::expected exactly two non-GETs (Nimbus refresh, Lantern ingest); found $n"
+            grep -rn --include='*.ts' --include='*.tsx' -E "method: '(POST|PUT|DELETE|PATCH)'" src
+            exit 1
+          fi
+          grep -q "nimbusUrl()}/auth/refresh" src/lib/api.ts
+          grep -q "hosts().lantern" src/lib/obs.ts
+          echo "ok: read-only against Beacon"
+
+      - name: The break-glass token never reaches the browser
+        # x-beacon-token is a shared secret held by Prometheus, Alertmanager and CI. In a bundle it
+        # would be published to every reader of the page, and it authenticates as
+        # `service:beacon-token`, which would make every action in the audit trail anonymous.
+        #
+        # Comment LINES are stripped first. `src/lib/api.ts` and `src/lib/objectives.ts` both name
+        # the header in prose — one to explain why it must never be sent, the other to record the
+        # curl that verified the empty objectives table — and a guard that fires on its own
+        # rationale trains people to disable the guard. The SECRET's value is swept from the raw
+        # tree, because a secret in a comment is still a secret in a repository.
+        run: |
+          set -euo pipefail
+          find src -name '*.ts' -o -name '*.tsx' | while read -r f; do
+            grep -vE '^\s*(/\*|\*|//)' "$f" | sed "s|^|$f:|"
+          done > /tmp/src.effective
+          cat index.html >> /tmp/src.effective
+          if grep -ni 'x-beacon-token' /tmp/src.effective; then
+            echo "::error::the static break-glass token must never be sent from a browser"
+            exit 1
+          fi
+          if grep -rn 'estate-only-beacon-breakglass' src index.html; then
+            echo "::error::a break-glass secret is checked into the bundle"
+            exit 1
+          fi
+          # The overrides route, checked here because this is the step that has the
+          # comment-stripped tree: src/lib/beacon.ts names the path in prose, at length, to record
+          # WHY there is no form for it.
+          if grep -n '/v1/gate/overrides' /tmp/src.effective; then
+            echo "::error::this bundle must not be able to create a gate override"
+            exit 1
+          fi
+          echo "ok: no static token in the bundle"
+
+      - name: The auth callback is redeemed before the app renders
+        run: |
+          grep -q 'bootstrapSession' src/main.tsx
+          echo "ok: the session is bootstrapped before render"
+
+  served-headers:
+    # PROBED, NOT READ. Both defects this guards were invisible in the config and obvious in a
+    # response: nginx's `add_header` is all-or-nothing per level, so a location that sets
+    # Cache-Control silently loses every inherited security header; and `try_files` is a file
+    # lookup rather than an internal redirect, so serving /index.html from `location = /` never
+    # enters `location = /index.html`. Reading the file suggests both are fine. Curling it does not.
+    #
+    # This repository adds a third probe the template has no reason to carry: that `/v1/gate`
+    # answers a plain-text 404 from this container rather than the app shell.
+    name: The served headers are the ones the config appears to promise
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: beacon-web }
+      # Temporary: the sibling the `link:` dependency and the Dockerfile's `uipkg` context resolve
+      # against, until @cloudsforge/ui is published.
+      - uses: actions/checkout@v4
+        with:
+          repository: cloudsforge-online/micro-ui
+          path: ui
+          token: ${{ secrets.ESTATE_READ_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: beacon-web
+          build-contexts: uipkg=ui
+          build-args: RELEASE=${{ github.sha }}
+          push: false
+          load: true
+          tags: beacon-web:headers
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Probe the running image
+        working-directory: beacon-web
+        run: |
+          set -uo pipefail
+          docker run -d --rm --name bw-ci -p 127.0.0.1:8099:8080 beacon-web:headers
+          for _ in $(seq 1 30); do curl -fsS -o /dev/null http://127.0.0.1:8099/ && break; sleep 1; done
+
+          fail=0
+          check() { # url, header, expected-substring, label
+            got=$(curl -sI "$1" | tr -d '\r' | grep -i "^$2:" | cut -d' ' -f2- || true)
+            case "${got:-}" in
+              "") echo "::error::$4 is missing $2"; fail=1 ;;
+              *"$3"*) echo "  ok   $4: $2: $got" ;;
+              *) echo "::error::$4 is missing or wrong for $2 (got '${got:-nothing}', wanted '$3')"; fail=1 ;;
+            esac
+          }
+
+          asset=$(curl -s http://127.0.0.1:8099/ | grep -oE '/assets/[^"]+\.js' | head -1)
+          for h in X-Content-Type-Options X-Frame-Options Referrer-Policy; do
+            check "http://127.0.0.1:8099/" "$h" "" "the shell"
+            [ -n "$asset" ] && check "http://127.0.0.1:8099$asset" "$h" "" "a hashed asset"
+          done
+          check "http://127.0.0.1:8099/" Cache-Control "no-store" "the shell"
+          [ -n "$asset" ] && check "http://127.0.0.1:8099$asset" Cache-Control "immutable" "a hashed asset"
+
+          # The honest 404 the whole config exists to preserve.
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8099/nope/not/a/route)
+          [ "$code" = "404" ] || { echo "::error::an unknown path returned $code, not 404"; fail=1; }
+
+          # A route the app owns must survive a hard refresh with a 200.
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8099/objectives)
+          [ "$code" = "200" ] || { echo "::error::/objectives returned $code, not 200"; fail=1; }
+
+          # And a child of that route must NOT — `/?$` rather than `(/|$)`.
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8099/objectives/deeper)
+          [ "$code" = "404" ] || { echo "::error::/objectives/deeper returned $code, not 404"; fail=1; }
+
+          # Beacon's own paths must be refused BY THIS CONTAINER, with a sentence naming the
+          # missing gateway rule — not rendered as the app shell under a 404, which is technically
+          # honest and completely unreadable as a diagnosis.
+          body=$(curl -s http://127.0.0.1:8099/v1/gate?release=x)
+          code=$(curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:8099/v1/gate?release=x')
+          [ "$code" = "404" ] || { echo "::error::/v1/gate returned $code, not 404"; fail=1; }
+          case "$body" in
+            *"belongs to micro-beacon"*) echo "  ok   /v1 is refused with a diagnosis" ;;
+            *) echo "::error::/v1/gate did not name micro-beacon; got: $body"; fail=1 ;;
+          esac
+
+          docker rm -f bw-ci >/dev/null 2>&1 || true
+          exit $fail
