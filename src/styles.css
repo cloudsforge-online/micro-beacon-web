@@ -33,6 +33,35 @@
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  */
 
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+ * THE PAGE ITSELF, WHICH THIS FILE DID NOT STYLE.
+ *
+ * This block was ABSENT until 2026-08-04, and its absence was the exact defect the header above
+ * warns about, in this very file: tokens delivered and never consumed. On the live surface
+ * `--cf-bg` resolved to its declared dark value while `getComputedStyle(document.body)`
+ * reported no background colour at all — dark bar, dark sub-nav, dark footer, and a WHITE page
+ * between them. Measured in headless Chromium through the estate gateway. Every other frontend
+ * carries this block; `micro-beacon-web` and `micro-lantern-web` were the only two without it.
+ *
+ * (The measured values are deliberately not quoted here. `test/tokens.test.ts` sweeps this file
+ * for a hex literal INCLUDING its comments, and says why: a hex in a comment is a value the next
+ * reader copies out of the comment and pastes into a rule.)
+ *
+ * No guard could see it. `test/tokens.test.ts` asks whether the colours in this file are literals,
+ * not whether the file styles anything, and `footer-audit` reads the FOOTER's computed background,
+ * which was right all along because the shared component brings its own. A check on the colours you
+ * wrote cannot notice the one you did not write, so the assertion added in tokens.test.ts asks for
+ * this declaration BY NAME.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════ */
+body {
+  margin: 0;
+  background: var(--cf-bg);
+  color: var(--cf-fg);
+  font-family: var(--cf-font-sans);
+  /* The bar is dark on every surface; the page follows the substrate. */
+  color-scheme: dark;
+}
+
 /* ---- layout ---------------------------------------------------------- */
 
 .bw-skip {

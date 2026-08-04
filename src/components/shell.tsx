@@ -7,7 +7,7 @@
  *
  * ── There is no mark and no wordmark here, and that is read off the registry ───────────────────
  *
- * `beacon` carries `markId: null` (`ui/packages/ui/src/surfaces.ts:400`), so `Mark surface="beacon"`
+ * `beacon` carries `markId: null` (`ui/packages/ui/src/surfaces.ts:434`), so `Mark surface="beacon"`
  * draws nothing at all (`hasMark`, `ui/packages/ui/src/index.tsx:569-571`). Nothing in this file is
  * designed around a mark. `brand/assets/beacon/` does hold a `mark-1024x1024.png`, which is the
  * SOURCE the favicons were cut from rather than a mark the registry declares —
@@ -16,7 +16,7 @@
  * `brand/plan.ts:43` also rules out an og card for this surface, which is why index.html carries no
  * `og:` block.
  */
-import { CloudsForgeBar } from '@cloudsforge/ui'
+import { CloudsForgeBar, CloudsForgeFooter } from '@cloudsforge/ui'
 import { NavLink, Outlet } from 'react-router-dom'
 import { PRODUCT } from '../lib/hosts.ts'
 import { NAV } from '../lib/routes.ts'
@@ -86,6 +86,41 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
         )}
         <Outlet />
       </main>
+
+      {/*
+        The company footer, from @cloudsforge/ui, and NEVER a local copy. Every link is derived from
+        the surface registry, so a new product appears here without this file changing. `beacon`
+        became `servesUi: true` (`ui/packages/ui/src/surfaces.ts:459`), which means all sixteen other
+        surfaces now derive a link TO this one from that same row — and until this commit the page
+        they arrived at rendered no footer at all and offered no way back.
+
+        IT IS OUTSIDE THE GATE ON PURPOSE. `app.tsx` wraps each PAGE in `<Gate>`, not the shell, so
+        a signed-out visitor gets the sign-in panel inside `<main>` with this footer underneath it.
+        On an `adminOnly` surface (`surfaces.ts:461`) that is the state that matters most: the
+        reader who cannot sign in is the one with nothing else on the screen to navigate by.
+
+        ── THE NOTE IS THE OPPOSITE OF `status`'s, AND THAT IS WHY IT IS WORTH SAYING ──────────────
+
+        `status-web`'s footer closes with "this page is served independently of the systems it
+        describes". That is true there and FALSE here, and a reader who has seen the sentence on one
+        CloudsForge surface would reasonably carry it to the other. This console shares
+        `beacon.<apex>` with `micro-beacon` itself — that is not a preference but a requirement, as
+        the header above records: Beacon sends no `access-control-*` header anywhere and 404s a
+        preflight, so a console on any other hostname could not read it at all. The cost of that
+        arrangement is exactly this: the page cannot outlive the thing it reports on, and a reader
+        deciding whether to promote a release should be told so on the page, not in a repository.
+      */}
+      <CloudsForgeFooter
+        current={PRODUCT}
+        account={account}
+        note={
+          <>
+            This console is served from the same hostname as the service it reads. Unlike the public
+            status page, it cannot report on an outage that takes Beacon itself down — if this page
+            does not load, that is not evidence of anything.
+          </>
+        }
+      />
     </>
   )
 }
