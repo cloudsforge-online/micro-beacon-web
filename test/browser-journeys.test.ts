@@ -20,12 +20,92 @@
 import assert from 'node:assert/strict'
 import { after, describe, it } from 'node:test'
 import { SURFACES } from '@cloudsforge/ui'
-import { assertMounted, closeBrowser, renderOnlyWithStubbedNetwork, type Stubs } from './journeys/browser.ts'
+import {
+  assertMounted,
+  closeBrowser,
+  renderOnlyWithStubbedNetwork,
+  type SentRequest,
+  type Session,
+  type Stubs,
+} from './journeys/browser.ts'
 import { startSurface, stopSurface } from './journeys/surface.ts'
 import { SERVICE_PREFIXES } from '../src/lib/routes.ts'
 
 /** A session in storage, so the gate lets the page render and the client attaches a bearer. */
 const SIGNED_IN = { 'cf.accessToken': 'test-access', 'cf.refreshToken': 'test-refresh' }
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+ * THE PORTAL, STANDING IN — AND THE SEAM THESE SCENARIOS EXIST FOR
+ *
+ * Every scenario here that wanted a signed-in operator did it by seeding `SIGNED_IN` into
+ * `localStorage`, and that is the shape of a test that cannot fail: **nothing in this estate ever
+ * puts a token into THIS origin's storage except `bootstrapSession` redeeming a `#cf_code`**, and
+ * until the commit these scenarios arrived with, nothing ever sent this surface a `#cf_code`.
+ *
+ * The estate's tokens are per-origin `localStorage` and there are NO cookies anywhere in it —
+ * measured, in a real browser against the running estate: after signing in at
+ * `hub.<apex>/account/login` the context held `['cf.accessToken', 'cf.refreshToken']` on Hub's
+ * origin and `[]` on Beacon's, with `context.cookies()` empty for every host. So an operator who
+ * is signed into the estate is, as far as this origin can see, a stranger — which is what
+ * `micro-ui`'s `pnpm footer-audit` reported the moment it started signing in for `adminOnly`
+ * surfaces rather than only for ones that redirect: `hides "Admin" from a signed-in operator`,
+ * four times over, on a footer rendering the identical 18 links signed-out and signed-in.
+ *
+ * The one bridge across an origin is the portal hand-off (`@cloudsforge/ui`: `signInRedirect`,
+ * then `consumeAuthCallback` redeeming at `POST /auth/handoff/redeem`), and `admin-web` has always
+ * crossed it — `ProtectedRoute` (admin-web/src/lib/auth.tsx:202-215) sends an anonymous visitor to
+ * the portal, which hands a held session straight back (hub-web/src/pages/account.tsx:220-236)
+ * without a second credential prompt. This surface never asked.
+ *
+ * So the stand-in below is the PORTAL, not this app: it answers `GET /account/login` and either
+ * holds a session — bouncing back with a code, as Hub does — or does not. What is under test is
+ * whether this bundle ASKS, what return address it asks with, and that it asks once.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/** The code Hub would put in the fragment. Redeemed once, for tokens, by `consumeAuthCallback`. */
+const HANDOFF_CODE = 'test-handoff-code-0001'
+
+/** Chromium asks the portal's origin for one, and an unanswered request is a failed request. */
+const PORTAL_FAVICON: Stubs[number] = ['GET /favicon.ico', { status: 204, body: '' }]
+
+/** Where the browser was sent to sign in, and what return address it carried. */
+function portalCalls(session: Session): SentRequest[] {
+  return session.apiCalls().filter((r) => new URL(r.url).pathname === '/account/login')
+}
+
+/**
+ * The portal, with or without a session of its own.
+ *
+ * With one it does what Hub does: mints a code and returns the browser to the address it was given,
+ * with the code in the FRAGMENT. Without one it renders its sign-in form and the browser stays
+ * there — which is the whole reason this surface may only ask once.
+ */
+function portal(holdsASession: boolean): Stubs[number] {
+  return [
+    'GET /account/login',
+    (req: SentRequest) => {
+      const back = new URL(req.url).searchParams.get('return')
+      if (back === null) return { status: 400, body: 'the console did not say where to return to' }
+      if (!holdsASession) {
+        return { contentType: 'text/html', body: '<!doctype html><title>Sign in</title><h1>Sign in</h1>' }
+      }
+      const url = new URL(back)
+      const params = new URLSearchParams(url.hash.replace(/^#/, ''))
+      params.set('cf_code', HANDOFF_CODE)
+      url.hash = params.toString()
+      return {
+        contentType: 'text/html',
+        body: `<!doctype html><title>Signing you in</title><meta http-equiv="refresh" content="0;url=${url.toString()}">`,
+      }
+    },
+  ]
+}
+
+/** Identity redeeming the code, once, for this origin's own tokens. */
+const REDEEM: Stubs[number] = [
+  'POST /auth/handoff/redeem',
+  { json: { accessToken: 'handed-access', refreshToken: 'handed-refresh', expiresIn: 900 } },
+]
 
 const ME: Stubs[number] = ['GET /auth/me', { json: { user: { handle: 'estateadmin', roles: ['admin'] } } }]
 
@@ -58,11 +138,109 @@ after(async () => {
   await stopSurface()
 })
 
+describe('the estate sign-on this console is part of', () => {
+  it('asks the portal whether the reader already holds a session — once, and no more', async () => {
+    const surface = await startSurface()
+    const session = await renderOnlyWithStubbedNetwork(surface.origin, {
+      path: '/',
+      stubs: [portal(false), PORTAL_FAVICON],
+      apiPrefixes: SERVICE_PREFIXES,
+    })
+    try {
+      // ASKED. The bundle has no way of its own to know: the estate's tokens are per-origin
+      // storage and it holds none, so the only reader it can distinguish from a stranger is one
+      // the portal has already told it about.
+      const asked = portalCalls(session)
+      assert.equal(asked.length, 1, `the portal was asked ${asked.length} times; expected once`)
+
+      // WITH THE ADDRESS THIS PAGE IS AT. A return address to anywhere else is how an operator
+      // signs in and lands on somebody else's surface.
+      const back = new URL(asked[0]?.url ?? '').searchParams.get('return')
+      assert.equal(back, `${surface.origin}/`)
+
+      // AND ONCE. The portal holds no session in this scenario, so it kept the browser; a reader
+      // who comes back must get this console rather than be sent round again.
+      await session.page.goto(`${surface.origin}/`, { waitUntil: 'domcontentloaded' })
+      await assertMounted(session, { showing: ['Beacon is an operator surface'] })
+      assert.equal(
+        portalCalls(session).length,
+        1,
+        'asked the portal a second time — a reader who declined to sign in is now in a loop',
+      )
+    } finally {
+      await session.close()
+    }
+  })
+
+  it('takes the hand-off when the portal holds one, and asks for no second credential', async () => {
+    const surface = await startSurface()
+    const session = await renderOnlyWithStubbedNetwork(surface.origin, {
+      path: '/?release=probe-1',
+      stubs: [portal(true), REDEEM, PORTAL_FAVICON, ...READS],
+      apiPrefixes: SERVICE_PREFIXES,
+    })
+    try {
+      // The operator is on the console, signed in, having typed nothing. This is the journey the
+      // footer defect was the visible half of.
+      await assertMounted(session, { showing: ['estateadmin'] })
+      assert.equal(session.page.url(), `${surface.origin}/?release=probe-1`)
+
+      // The code was spent at identity's redemption route and is NOT in the address bar. Both
+      // halves matter: a code left in the fragment is a credential in the history.
+      const redeemed = session
+        .apiCalls()
+        .filter((r) => new URL(r.url).pathname === '/auth/handoff/redeem')
+      assert.equal(redeemed.length, 1, `redeemed ${redeemed.length} times; expected once`)
+      assert.equal(JSON.parse(redeemed[0]?.body ?? '{}').code, HANDOFF_CODE)
+      assert.doesNotMatch(session.page.url(), /cf_code/)
+
+      // And the tokens are this origin's own, from the redemption — not the portal's.
+      const stored = await session.page.evaluate(() => ({
+        access: localStorage.getItem('cf.accessToken'),
+        refresh: localStorage.getItem('cf.refreshToken'),
+      }))
+      assert.deepEqual(stored, { access: 'handed-access', refresh: 'handed-refresh' })
+    } finally {
+      await session.close()
+    }
+  })
+
+  it('does not send an operator who already holds a session to the portal at all', async () => {
+    const surface = await startSurface()
+    const session = await renderOnlyWithStubbedNetwork(surface.origin, {
+      path: '/?release=probe-1',
+      storage: SIGNED_IN,
+      // The portal is in the table and must go UNUSED. Left out, an unwanted trip to it would be
+      // an aborted request rather than a legible failure.
+      stubs: [portal(true), REDEEM, PORTAL_FAVICON, ...READS],
+      apiPrefixes: SERVICE_PREFIXES,
+    })
+    try {
+      await assertMounted(session, { showing: ['estateadmin'] })
+      assert.deepEqual(
+        portalCalls(session).map((r) => r.url),
+        [],
+        'a reader holding a session was sent to sign in again',
+      )
+    } finally {
+      await session.close()
+    }
+  })
+})
+
 describe('the operator console renders', () => {
   it('shows a signed-out visitor a sign-in path and makes NO API request at all', async () => {
     const surface = await startSurface()
-    const session = await renderOnlyWithStubbedNetwork(surface.origin, { path: '/?release=probe-1', apiPrefixes: SERVICE_PREFIXES })
+    const session = await renderOnlyWithStubbedNetwork(surface.origin, {
+      path: '/?release=probe-1',
+      stubs: [portal(false), PORTAL_FAVICON],
+      apiPrefixes: SERVICE_PREFIXES,
+    })
     try {
+      // The signed-out screen is what a reader gets once the portal has been asked and had nothing
+      // to give. Reached by coming back rather than by seeding a flag, so this scenario stands on
+      // the one-shot behaviour pinned above rather than on a private arrangement with it.
+      await session.page.goto(`${surface.origin}/?release=probe-1`, { waitUntil: 'domcontentloaded' })
       const text = await assertMounted(session, {
         showing: ['Beacon is an operator surface', 'Sign in'],
       })
@@ -270,9 +448,13 @@ describe('the estate footer', () => {
     const surface = await startSurface()
     const session = await renderOnlyWithStubbedNetwork(surface.origin, {
       path: '/?release=probe-1',
+      stubs: [portal(false), PORTAL_FAVICON],
       apiPrefixes: SERVICE_PREFIXES,
     })
     try {
+      // The panel is what a reader gets once the portal has been asked and had nothing to give;
+      // see the one-shot scenario above, which this comes back from rather than seeding a flag.
+      await session.page.goto(`${surface.origin}/?release=probe-1`, { waitUntil: 'domcontentloaded' })
       await assertMounted(session, { showing: ['Beacon is an operator surface'] })
       const f = await session.page.evaluate(READ_FOOTER)
 
@@ -324,12 +506,19 @@ describe('the estate footer', () => {
     }
   })
 
+  /**
+   * The operator's footer, reached the way an operator reaches it: through the portal.
+   *
+   * This scenario used to seed `SIGNED_IN` into `localStorage`, and that made it a check that
+   * could not fail — it arranged the one thing the bundle could not do for itself and then
+   * asserted the consequence. It is now driven from a signed-out browser through the hand-off,
+   * which is the seam the estate audit exercises.
+   */
   it('marks Beacon as the current surface for an operator, and offers the other three', async () => {
     const surface = await startSurface()
     const session = await renderOnlyWithStubbedNetwork(surface.origin, {
       path: '/?release=probe-1',
-      storage: SIGNED_IN,
-      stubs: READS,
+      stubs: [portal(true), REDEEM, PORTAL_FAVICON, ...READS],
       apiPrefixes: SERVICE_PREFIXES,
     })
     try {

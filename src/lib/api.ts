@@ -416,23 +416,94 @@ export const nimbus = <T,>(path: string, opts?: RequestOptions): Promise<T> =>
 /* ---- boot and sign-in --------------------------------------------- */
 
 /**
- * Redeem an SSO hand-off code, if the Account portal sent us back with one.
+ * Whether this tab has already asked the portal about the reader.
  *
- * Called once from main.tsx BEFORE React renders, so the first paint already knows whether there
- * is a session and no screen flashes signed-out and then signed-in. That matters more here than on
- * a public surface: the signed-out screen on this app is a sign-in panel, and flashing it at an
- * operator who has just signed in is the shape of a login loop.
+ * `sessionStorage`, and neither `localStorage` nor a module variable, for reasons on both sides:
+ * a module variable dies with the navigation the ask IS, so it could never say "already asked",
+ * and `localStorage` would remember for ever — an operator who declined once in the morning would
+ * still be treated as a stranger after signing in at Hub in the afternoon. A tab is the unit a
+ * reader would recognise.
+ */
+const SSO_ASKED_KEY = 'cf.ssoAsked'
+
+/**
+ * Record the ask and confirm it stuck; false means it did not, so nobody may leave.
+ *
+ * The verification is the loop guard and it is not decorative. `sessionStorage` throws on write in
+ * a Safari private window, and an "ask once" that cannot remember having asked is an ask on every
+ * page load — with the return address pointing back here, that is an infinite bounce between this
+ * console and the portal, in the browser configuration least able to explain itself.
+ */
+function claimTheOneAsk(): boolean {
+  try {
+    if (typeof sessionStorage === 'undefined') return false
+    if (sessionStorage.getItem(SSO_ASKED_KEY) !== null) return false
+    sessionStorage.setItem(SSO_ASKED_KEY, '1')
+    return sessionStorage.getItem(SSO_ASKED_KEY) !== null
+  } catch {
+    return false
+  }
+}
+
+/**
+ * What the boot sequence found. `main.tsx` renders for two of the three.
+ *
+ * A boolean cannot express the third: "there is nothing to render because the browser is leaving".
+ * Rendering anyway paints the sign-in panel at somebody who is a redirect away from being signed
+ * in, which is the flash the awaited bootstrap exists to prevent.
+ */
+export type BootResult = 'signed-in' | 'signed-out' | 'asking-the-portal'
+
+/**
+ * Establish the session, and — if there is none — ask the portal ONCE whether the reader has one.
+ *
+ * Called from main.tsx BEFORE React renders, so the first paint already knows.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * WHY THIS SURFACE MUST ASK, AND WHY IT CANNOT ANSWER THE QUESTION ITSELF
+ *
+ * This estate's session is a pair of tokens in `localStorage`, under the shared `cf.*` keys, and
+ * `localStorage` is per ORIGIN. There are no cookies anywhere in the estate — measured in a real
+ * browser against the running gateway: after signing in at `hub.<apex>/account/login` the context
+ * held `cf.accessToken` and `cf.refreshToken` on Hub's origin, `[]` on this one, and
+ * `context.cookies()` was empty for every host. So an operator who signed in five seconds ago is,
+ * to this bundle, indistinguishable from somebody who has never had an account.
+ *
+ * The one bridge is the portal hand-off: go to `hub/account/login?return=<here>`, and a portal
+ * that already holds a session mints a 60-second, single-use, origin-bound code and returns the
+ * browser with it in the fragment — no second credential prompt
+ * (`hub-web/src/pages/account.tsx:210-236`). `admin-web` has crossed that bridge all along, from
+ * `ProtectedRoute` (`admin-web/src/lib/auth.tsx:202-215`); this console never did, and the cost
+ * was not only a sign-in panel shown to somebody already signed in. `CloudsForgeFooter` decides
+ * `adminOnly` visibility from `account.roles` (`ui/packages/ui/src/index.tsx:969`), so with no
+ * session there are no roles, and the footer hid Admin, Foresight Admin, Lantern and Beacon from
+ * every operator on the two consoles those links matter most on. `micro-ui`'s `pnpm footer-audit`
+ * reported exactly that, four times per surface, the day it began signing in for `adminOnly`
+ * surfaces instead of only for ones that redirect.
+ *
+ * ── ONCE, AND THE ASK IS NOT AN AUTHORISATION DECISION ────────────────────────────────────────
+ *
+ * The ask is claimed BEFORE the browser leaves, so a portal that holds no session — which keeps
+ * the reader on its own sign-in form — cannot turn a return visit into a second departure. A
+ * reader who comes back gets this console's own sign-in panel, which is the screen that explains
+ * where they are.
+ *
+ * And nothing here decides who is an operator. This asks "is there a session at all", exactly as
+ * `RequiresOperator` does; `roles` is read only to decide what the chrome may OFFER. Beacon
+ * verifies the credential on every route it serves (`authorise()`, `beacon/src/server.ts:870-898`)
+ * and is the only thing that can. A link on a page is not an authorisation.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
  *
  * The strip-then-exchange ordering inside `consumeAuthCallback` is load-bearing and is documented
  * where it is implemented: the code leaves the address bar before it goes over the wire, so it is
  * never in the history, in a referrer, or in a screenshot taken while the request is in flight.
  */
-export async function bootstrapSession(): Promise<boolean> {
+export async function bootstrapSession(): Promise<BootResult> {
   try {
     const tokens = await consumeAuthCallback()
     if (tokens) {
       setTokens(tokens)
-      return true
+      return 'signed-in'
     }
   } catch (err) {
     // A failed exchange is a signed-out boot, not a broken app: the sign-in button is right there.
@@ -443,7 +514,10 @@ export async function bootstrapSession(): Promise<boolean> {
       stack: err instanceof Error ? (err.stack ?? null) : null,
     })
   }
-  return hasSession()
+  if (hasSession()) return 'signed-in'
+  if (!claimTheOneAsk()) return 'signed-out'
+  signIn()
+  return 'asking-the-portal'
 }
 
 /**
