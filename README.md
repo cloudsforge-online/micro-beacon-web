@@ -34,10 +34,15 @@ curl -s --cacert ../deploy/gateway/certs/ca.crt -o /dev/null -w '%{http_code}' \
 # → 404
 ```
 
-`deploy/gateway/dynamic/estate-web.yml:432` says so in its own words — *"no bundle is served at
-`beacon.<apex>`"* — and routes the whole host to the API. This is the bundle that entry should reach.
-`test/hosts.test.ts` pins `servesUi: false`, so the day micro-ui flips it this README fails rather
-than becoming the next stale inherited claim.
+`deploy/gateway/dynamic/estate-web.yml:432` said so in its own words — *"no bundle is served at
+`beacon.<apex>`"* — and routed the whole host to the API. This is the bundle that entry now reaches.
+
+**That is fixed, and the registry has been flipped on the measurement.**
+`ui/packages/ui/src/surfaces.ts:446` now reads `servesUi: true`, and `test/hosts.test.ts:100` pins
+it at `true` — so the day it regresses this README fails rather than becoming the next stale
+inherited claim. Measured live on 2026-08-05: `https://beacon.cloudsforge.online/` → `200
+text/html`. On testnet the same surface is `https://beacon-testnet.cloudsforge.online/` — testnet
+hostnames are single-label `<surface>-testnet.`, never `<surface>.testnet.`.
 
 ---
 
