@@ -29,7 +29,7 @@ import { surface } from '@cloudsforge/ui/surfaces'
  *     http://127.0.0.1:4143/v1/gate?release=probe-1
  *   → HTTP/1.1 404 Not Found
  *
- * The estate's CORS is one middleware on the gateway (`deploy/gateway/dynamic/policy.yml:42`,
+ * The estate's CORS is one middleware on the gateway (`deploy/gateway/dynamic/policy.yml`,
  * `cf-cors`), applied to every `websecure` router, and its allowlist names production origins
  * only — no `localhost` entry exists in it. So a page on Vite's own port cannot read Beacon
  * cross-origin at all: the preflight fails and the request never leaves the browser. A dev server
@@ -43,10 +43,10 @@ import { surface } from '@cloudsforge/ui/surfaces'
  *
  * The target is read from the SURFACE REGISTRY rather than typed, so there is no second copy of
  * a port in this repository to go stale. `CF_BEACON_ORIGIN` overrides it, and it exists because
- * the registry's `devPort` is a fact about the SERVICE (Beacon binds 4011 — `beacon/src/env.ts:298`,
- * `beacon/.env.example:57`, `beacon/Dockerfile:90`) while a deployment is free to remap it: the
+ * the registry's `devPort` is a fact about the SERVICE (Beacon binds 4011 — `beacon/src/env.ts`,
+ * `beacon/.env.example`, `beacon/Dockerfile:90`) while a deployment is free to remap it: the
  * estate's compose publishes the container on `127.0.0.1:4143`
- * (`deploy/compose/docker-compose.estate.yml:2133`). That remap is a fact about the deployment and
+ * (`deploy/compose/docker-compose.estate.yml`). That remap is a fact about the deployment and
  * belongs in an environment variable of the dev server, never in the bundle.
  *
  *   CF_BEACON_ORIGIN=http://127.0.0.1:4143 pnpm dev
@@ -75,7 +75,7 @@ export default defineConfig({
   },
   // 5193. Taken deliberately rather than by taking the next free number: 5191 and 5194 are LEFT
   // FREE on purpose, because `micro-lantern-web` is being written in parallel and still carries
-  // the template's placeholder 5199 (`lantern-web/vite.config.ts:35`). Lantern should take 5191 —
+  // the template's placeholder 5199 (`lantern-web/vite.config.ts`). Lantern should take 5191 —
   // it is the other operator tool, and adjacency there is more useful than adjacency to a status
   // page. The occupied set was read off every sibling's `vite.config.ts` rather than assumed:
   // 3001, 3003, 5170, 5171, 5172, 5173, 5180, 5182-5190, 5192, 5195, 5199.

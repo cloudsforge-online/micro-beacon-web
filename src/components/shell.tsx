@@ -7,13 +7,13 @@
  *
  * ── There is no mark and no wordmark here, and that is read off the registry ───────────────────
  *
- * `beacon` carries `markId: null` (`ui/packages/ui/src/surfaces.ts:434`), so `Mark surface="beacon"`
- * draws nothing at all (`hasMark`, `ui/packages/ui/src/index.tsx:569-571`). Nothing in this file is
+ * `beacon` carries `markId: null` (`ui/packages/ui/src/surfaces.ts`), so `Mark surface="beacon"`
+ * draws nothing at all (`hasMark`, `ui/packages/ui/src/index.tsx`). Nothing in this file is
  * designed around a mark. `brand/assets/beacon/` does hold a `mark-1024x1024.png`, which is the
  * SOURCE the favicons were cut from rather than a mark the registry declares —
  * `test/brand-chrome.test.ts` asserts the absence in both directions, so a mark appearing in the
  * registry later fails the build and forces a decision rather than being copied in by reflex.
- * `brand/plan.ts:43` also rules out an og card for this surface, which is why index.html carries no
+ * `brand/plan.ts` also rules out an og card for this surface, which is why index.html carries no
  * `og:` block.
  */
 import { CloudsForgeBar, CloudsForgeFooter } from '@cloudsforge/ui'
@@ -90,13 +90,13 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
       {/*
         The company footer, from @cloudsforge/ui, and NEVER a local copy. Every link is derived from
         the surface registry, so a new product appears here without this file changing. `beacon`
-        became `servesUi: true` (`ui/packages/ui/src/surfaces.ts:459`), which means all sixteen other
+        became `servesUi: true` (`ui/packages/ui/src/surfaces.ts`), which means all sixteen other
         surfaces now derive a link TO this one from that same row — and until this commit the page
         they arrived at rendered no footer at all and offered no way back.
 
         IT IS OUTSIDE THE GATE ON PURPOSE. `app.tsx` wraps each PAGE in `<Gate>`, not the shell, so
         a signed-out visitor gets the sign-in panel inside `<main>` with this footer underneath it.
-        On an `adminOnly` surface (`surfaces.ts:461`) that is the state that matters most: the
+        On an `adminOnly` surface (`surfaces.ts`) that is the state that matters most: the
         reader who cannot sign in is the one with nothing else on the screen to navigate by.
 
         ── THE NOTE IS THE OPPOSITE OF `status`'s, AND THAT IS WHY IT IS WORTH SAYING ──────────────

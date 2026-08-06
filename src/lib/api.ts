@@ -13,13 +13,13 @@
  *
  * `micro-explorer-web` states the rule "a bearer must never travel to the chain index", because
  * every `micro-indexer` read it makes is anonymous. **Every route this bundle calls is
- * authenticated, without exception.** `authorise()` (`beacon/src/server.ts:870-898`) checks the
+ * authenticated, without exception.** `authorise()` (`beacon/src/server.ts`) checks the
  * static `x-beacon-token` first and then requires an identity JWT; for `READ_SCOPE` and
- * `GATE_SCOPE` it accepts ANY authenticated user principal (`:895`). So every call here is issued
+ * `GATE_SCOPE` it accepts ANY authenticated user principal. So every call here is issued
  * with the default `auth: true` and carries the bearer.
  *
  * **The static break-glass token is never sent from this bundle and must never be.** It is a
- * shared secret held by Prometheus, Alertmanager and CI (`beacon/src/server.ts:21-29`); putting it
+ * shared secret held by Prometheus, Alertmanager and CI (`beacon/src/server.ts`); putting it
  * in a browser would publish it to every reader of the page and to every extension in their
  * profile, and it authenticates as `service:beacon-token` — which would make every action in the
  * audit trail anonymous. `test/api.test.ts` asserts no request this client builds carries an
@@ -104,7 +104,7 @@ export class ApiError extends Error {
   readonly code: string | undefined
   /**
    * The server's id for the exact request that failed, echoed in both the `x-request-id` header
-   * and the error body. Beacon sets it on EVERY response (`beacon/src/server.ts:1006`), including
+   * and the error body. Beacon sets it on EVERY response (`beacon/src/server.ts`), including
    * the ones produced before a route matched, so it is present even for a 404 from the router.
    */
   readonly requestId: string | undefined
@@ -122,7 +122,7 @@ export class ApiError extends Error {
  * Pull the sentence, the code and the request id out of a service's error body.
  *
  * Beacon's envelope is **nested** — `{error: {code, message, requestId}}`, built by `errorReply()`
- * at `beacon/src/server.ts:995-997`. This function used to read it as flat in the template,
+ * at `beacon/src/server.ts`. This function used to read it as flat in the template,
  * assigning `data.error` — an object — straight to the displayed message, so every server-side
  * failure rendered as `[object Object]` with the real message, the code and the request id all
  * present in the response and all discarded.
@@ -289,8 +289,8 @@ export interface RequestOptions {
    * Extra request headers. **Nothing on this surface sets one, and that is a fact about the API.**
    *
    * Beacon reads exactly three request headers: `authorization` and `x-beacon-token` in
-   * `authorise` (`beacon/src/server.ts:876`, `:884`), plus `x-request-id` and `host` in the server
-   * frame (`:249`, `:253`). There is no `Idempotency-Key` anywhere in that repository, and this
+   * `authorise` (`beacon/src/server.ts`), plus `x-request-id` and `host` in the server
+   * frame. There is no `Idempotency-Key` anywhere in that repository, and this
    * bundle sends no request that would need one: every call it makes is a GET.
    *
    * The parameter is kept rather than deleted because deleting it would make the next writer add
@@ -472,10 +472,10 @@ export type BootResult = 'signed-in' | 'signed-out' | 'asking-the-portal'
  * The one bridge is the portal hand-off: go to `hub/account/login?return=<here>`, and a portal
  * that already holds a session mints a 60-second, single-use, origin-bound code and returns the
  * browser with it in the fragment — no second credential prompt
- * (`hub-web/src/pages/account.tsx:210-236`). `admin-web` has crossed that bridge all along, from
- * `ProtectedRoute` (`admin-web/src/lib/auth.tsx:202-215`); this console never did, and the cost
+ * (`hub-web/src/pages/account.tsx`). `admin-web` has crossed that bridge all along, from
+ * `ProtectedRoute` (`admin-web/src/lib/auth.tsx`); this console never did, and the cost
  * was not only a sign-in panel shown to somebody already signed in. `CloudsForgeFooter` decides
- * `adminOnly` visibility from `account.roles` (`ui/packages/ui/src/index.tsx:969`), so with no
+ * `adminOnly` visibility from `account.roles` (`ui/packages/ui/src/index.tsx`), so with no
  * session there are no roles, and the footer hid Admin, Foresight Admin, Lantern and Beacon from
  * every operator on the two consoles those links matter most on. `micro-ui`'s `pnpm footer-audit`
  * reported exactly that, four times per surface, the day it began signing in for `adminOnly`
@@ -490,7 +490,7 @@ export type BootResult = 'signed-in' | 'signed-out' | 'asking-the-portal'
  *
  * And nothing here decides who is an operator. This asks "is there a session at all", exactly as
  * `RequiresOperator` does; `roles` is read only to decide what the chrome may OFFER. Beacon
- * verifies the credential on every route it serves (`authorise()`, `beacon/src/server.ts:870-898`)
+ * verifies the credential on every route it serves (`authorise()`, `beacon/src/server.ts`)
  * and is the only thing that can. A link on a page is not an authorisation.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  *

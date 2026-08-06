@@ -36,9 +36,9 @@ export interface AppRoute {
  * Every route on this surface needs a session, and there is no `public` column here.
  *
  * `micro-explorer-web`'s equivalent has one, because its reads are anonymous. Nothing here is:
- * `authorise()` (`beacon/src/server.ts:870-898`) requires a static token or an identity JWT on
+ * `authorise()` (`beacon/src/server.ts`) requires a static token or an identity JWT on
  * every `/v1` route, and `beacon` is `adminOnly: true` in the registry
- * (`ui/packages/ui/src/surfaces.ts:406`). A column that would read `false` on every row is a column
+ * (`ui/packages/ui/src/surfaces.ts`). A column that would read `false` on every row is a column
  * somebody eventually reads as meaningful, so the fact is stated once, here, and enforced once, in
  * `src/app.tsx`, where a single gate wraps the whole tree.
  */
@@ -81,7 +81,7 @@ export const DEEP_LINK_PATH = '/objectives'
  *
  * Enumerated here as well as in nginx.conf so `test/routes.test.ts` can check the two agree. In
  * production this bundle and the service share `beacon.<apex>`; something in front has to decide
- * which answers what, and today nothing does — `deploy/gateway/dynamic/estate-web.yml:432` routes
+ * which answers what, and today nothing does — `deploy/gateway/dynamic/estate-web.yml` routes
  * the whole host to the API. See the README, "What deploy has to do".
  */
 export const SERVICE_PREFIXES: readonly string[] = ['v1', 'api', 'metrics', 'livez', 'readyz']

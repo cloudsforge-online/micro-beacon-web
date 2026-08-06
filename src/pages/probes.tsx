@@ -5,11 +5,11 @@
  * and Beacon is explicit that this is not the same as down: `scrapeRefresh` publishes NOTHING for
  * it rather than a zero, because "a gap in a graph is readable; a series that reads 0 for a probe
  * that has never run makes every deploy look like an outage"
- * (`beacon/src/server.ts:775-777`). This page follows the same rule in words: `pending` is
+ * (`beacon/src/server.ts`). This page follows the same rule in words: `pending` is
  * "not yet reported", in the unknown tone, and never in the same tone as `up`.
  *
  * Probes are NOT a gate input. `collectReasons` reads journeys, budgets, conformance and open
- * incidents (`beacon/src/gate.ts:192-332`) and never touches `probes` or `probe_states` — a probe
+ * incidents (`beacon/src/gate.ts`) and never touches `probes` or `probe_states` — a probe
  * failure reaches the gate only if it opens an incident. The page says so, because a reader who
  * assumed otherwise would look at a green probe list and conclude the gate had checked it.
  */

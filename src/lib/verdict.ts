@@ -4,12 +4,12 @@
  * Pure — no React, no fetch, no DOM — so every property this surface exists to hold is provable in
  * `node --test` with nothing installed. That mirrors the service's own reasoning for exporting
  * `decide()` as a pure function: the property this repository exists to guarantee should be
- * provable "without a database, a clock, an HTTP server or a probe" (`beacon/src/gate.ts:126-131`).
+ * provable "without a database, a clock, an HTTP server or a probe" (`beacon/src/gate.ts`).
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * THREE THINGS THIS MODULE MUST NEVER LET A READER BELIEVE.
  *
- * 1. **That an unknown is a milder kind of known.** `beacon/src/gate.ts:68-74`: they both refuse,
+ * 1. **That an unknown is a milder kind of known.** `beacon/src/gate.ts`: they both refuse,
  *    "only one of them may ever be overridden, because 'ship it anyway, I know about that' is a
  *    decision a human can be accountable for and 'ship it anyway, nobody knows' is not a decision
  *    at all". So `classify()` returns two separate lists rather than one sorted list, the two are
@@ -17,15 +17,15 @@
  *    them break-glass can reach.
  *
  * 2. **That a refusal is an error.** `GET /v1/gate` answers 200 for `refuse`
- *    (`beacon/src/server.ts:388-392`). A refusal is the ANSWER. So there is no path in this module
+ *    (`beacon/src/server.ts`). A refusal is the ANSWER. So there is no path in this module
  *    from a verdict to a failure state, and `Asked` below is a separate type from `GateAnswer`
  *    precisely so that a screen cannot render one where the other belongs.
  *
  * 3. **That the verdict is the surface's accent colour.** `beacon`'s accent is signal green
- *    (`ui/packages/ui/src/tokens.css:607-613`), deliberately the chart `good` step, because for a
+ *    (`ui/packages/ui/src/tokens.css`), deliberately the chart `good` step, because for a
  *    status tool "the surface agreeing with its healthiest verdict is correct" — and the registry
  *    adds, in the same breath, that "Beacon's own pages still reserve green/amber/red for probe
- *    verdicts" (`ui/packages/ui/src/surfaces.ts:392-395`). The headline answer on this app's
+ *    verdicts" (`ui/packages/ui/src/surfaces.ts`). The headline answer on this app's
  *    landing page is usually `refuse`. A verdict drawn in `var(--cf-accent)` would therefore
  *    inherit the page's green and a refusal would render as a pass. Every `Voice` below carries a
  *    `tone` that maps to a RESERVED status token only, and `test/verdict.test.ts` fails if
@@ -75,7 +75,7 @@ export interface Voice {
 /* ══════════════════════════════ determinacy ══════════════════════════════ */
 
 /**
- * The unknown codes, mirrored from `UNKNOWN_CODES` at `beacon/src/gate.ts:85-92`.
+ * The unknown codes, mirrored from `UNKNOWN_CODES` at `beacon/src/gate.ts`.
  *
  * `test/verdict.test.ts` reads that file from a sibling checkout and fails if the two sets differ,
  * in either direction. A code the service calls `unknown` and this bundle calls `known` would
@@ -113,7 +113,7 @@ export function disagreements(reasons: readonly GateReason[]): readonly GateReas
  * The two lists, kept apart.
  *
  * Order within each list is the SERVICE's order, unchanged. `collectReasons` gathers journeys,
- * then budgets, then conformance, then incidents (`beacon/src/gate.ts:192-332`), and re-sorting
+ * then budgets, then conformance, then incidents (`beacon/src/gate.ts`), and re-sorting
  * them by severity here would hide the fact that they arrive grouped by subsystem.
  */
 export function classify(reasons: readonly GateReason[]): {
@@ -130,8 +130,8 @@ export function classify(reasons: readonly GateReason[]): {
  * What break-glass can reach, in one sentence per class.
  *
  * `addOverride` refuses an indeterminate reason code at the point of creation
- * (`beacon/src/gate.ts:500-505`) AND `decide()` never consults an override on the unknown branch
- * (`:140-150`). Two layers, and the service explains why they are both needed: one protects
+ * (`beacon/src/gate.ts`) AND `decide()` never consults an override on the unknown branch.
+ * Two layers, and the service explains why they are both needed: one protects
  * against an override that already exists, the other against one being written in the belief that
  * it will work.
  */
@@ -179,8 +179,8 @@ export function verdictVoice(answer: {
   readonly indeterminate: boolean
 }): Voice {
   if (answer.indeterminate) {
-    // `indeterminate: true` implies `refuse`, always (`beacon/src/gate.ts:122-123`,
-    // `:140-150`). Checked first so that a body which somehow carried `promote` alongside it
+    // `indeterminate: true` implies `refuse`, always — see `decide()` in
+    // `beacon/src/gate.ts`. Checked first so that a body which somehow carried `promote` alongside it
     // could not render as a pass — see `contradictions()` below, which reports that rather than
     // hiding it.
     return {
@@ -227,7 +227,7 @@ export function verdictVoice(answer: {
  * as a refusal under `verdictVoice` while the JSON said the opposite, and an operator comparing
  * this page with `beacon gate --release …` would have no way to see why they disagreed. A database
  * CHECK constraint already forbids the combination on a RECORDED decision
- * (`gate_decisions_indeterminate_never_promotes`, `beacon/src/gate.ts:12-13`); nothing enforces it
+ * (`gate_decisions_indeterminate_never_promotes`, `beacon/src/gate.ts`); nothing enforces it
  * on the wire.
  */
 export function contradictions(answer: GateAnswer): readonly string[] {
@@ -276,7 +276,7 @@ export function contradictions(answer: GateAnswer): readonly string[] {
  * failure to gather inputs and turns it into a `beacon_unavailable` reason with
  * `determinacy: 'unknown'` — a refusal, not an exception — and says why it does not rethrow: "one
  * plausible thing a caller does with an exception is log it and carry on"
- * (`beacon/src/gate.ts:368-411`). That is Beacon failing to read its OWN state, and it still
+ * (`beacon/src/gate.ts`). That is Beacon failing to read its OWN state, and it still
  * arrives here as a 200 with a verdict. What `unasked` covers is the layer further out: this
  * browser could not reach Beacon at all, and no verdict exists anywhere.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
@@ -319,7 +319,7 @@ export function validateRelease(raw: string, pattern: RegExp): { ok: true } | { 
   const value = raw.trim()
   if (value.length === 0) return { ok: false, why: 'Enter a release tag to ask the gate about it.' }
   if (pattern.test(value)) return { ok: true }
-  // The service's own sentence, from `requireRelease`, `beacon/src/server.ts:916`. Quoted rather
+  // The service's own sentence, from `requireRelease`, `beacon/src/server.ts`. Quoted rather
   // than paraphrased so that the page and the 400 an operator may also see in a terminal agree.
   return {
     ok: false,
@@ -340,33 +340,33 @@ export const REASON_MEANING: Readonly<Record<ReasonCode, string>> = {
   journey_failing: 'The most recent scheduled run of a critical journey did not pass.',
   journey_skipped:
     'A skip is never green. It counts exactly as a failure would, because the journeys that ' +
-    'quietly did nothing are the easiest ones to fake (beacon/src/gate.ts:237-241).',
+    'quietly did nothing are the easiest ones to fake (beacon/src/gate.ts).',
   journey_muted:
     'A muted journey is not a passing journey; it is an unmeasured one. The muted count must be ' +
-    'zero at a gate (beacon/src/gate.ts:201-212).',
+    'zero at a gate (beacon/src/gate.ts).',
   journey_recent_failure:
     'Three consecutive green runs are required, not one. One green run after a red one is a ' +
-    'flake that happened to land the right way up (beacon/src/gate.ts:250-251).',
+    'flake that happened to land the right way up (beacon/src/gate.ts).',
   error_budget_exhausted:
     'The whole error budget has been spent, which is a change freeze on that service. This is ' +
-    'the gate BEING the freeze rather than a paragraph describing one (beacon/src/gate.ts:287-296).',
+    'the gate BEING the freeze rather than a paragraph describing one (beacon/src/gate.ts).',
   conformance_breaking: 'A suite found breaking differences against the recorded corpus.',
-  incident_open: 'A SEV1 or SEV2 incident is open. SEV3 and SEV4 do not block (beacon/src/gate.ts:341).',
+  incident_open: 'A SEV1 or SEV2 incident is open. SEV3 and SEV4 do not block (beacon/src/gate.ts).',
   journey_never_run: 'No scheduled run of this journey has ever been recorded. Nobody has measured it.',
   journey_stale:
     'The last run is older than the freshness horizon. THIS IS THE ONE THAT CATCHES A DEAD ' +
     'SCHEDULER: a journey that stopped running reports its last status for ever, so a green grid ' +
-    'can mean nothing has run since Tuesday (beacon/src/gate.ts:224-226).',
+    'can mean nothing has run since Tuesday (beacon/src/gate.ts).',
   journey_insufficient_history:
     'Fewer runs have been recorded than the gate requires to believe a pass.',
   error_budget_no_data:
     'The window holds no observations. Zero observations is not 100% availability: a service ' +
-    'nothing has measured has not demonstrated anything (beacon/src/gate.ts:278-281).',
+    'nothing has measured has not demonstrated anything (beacon/src/gate.ts).',
   conformance_never_run: 'No conformance run has ever been recorded, so nothing has been compared.',
   conformance_inconclusive:
     "A suite's most recent run was a skip or an error, so nothing was compared. A suite that " +
     'could not run is not a suite that passed.',
   beacon_unavailable:
     'Beacon could not read its own state, so it could not evaluate anything. It refuses rather ' +
-    'than throwing, because a caller might log an exception and carry on (beacon/src/gate.ts:368-374).',
+    'than throwing, because a caller might log an exception and carry on (beacon/src/gate.ts).',
 }

@@ -11,7 +11,7 @@
  * The template has a fifth state, `forbidden`, entered on a 403. This file used to have a wider
  * one, `refused`, entered on 401 OR 403, because every `micro-indexer` read demanded a scope this
  * browser could not hold. `micro-indexer` made its seven reads anonymous
- * (`authoriseRead`, `indexer/src/server.ts:792-801`), so that state was the machinery of a
+ * (`authoriseRead`, `indexer/src/server.ts`), so that state was the machinery of a
  * restriction that no longer exists and it has been deleted rather than left to apologise.
  *
  * A 401 or a 403 from the chain index is now a genuine fault — this bundle presents no credential

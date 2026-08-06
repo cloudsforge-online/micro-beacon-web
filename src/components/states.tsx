@@ -18,7 +18,7 @@
  * a bespoke "you are not allowed" panel would mean this bundle deciding what Beacon's refusal
  * meant, and `authorise()` has three different 4xx paths whose causes are not interchangeable —
  * an expired token, a missing authority, and a verifier that is itself down and answers 503
- * (`beacon/src/server.ts:302-324`). `Failed` prints what the service said. `noticeFor` keeps the
+ * (`beacon/src/server.ts`). `Failed` prints what the service said. `noticeFor` keeps the
  * code, so a screen that genuinely needs to branch can, and none of them currently does.
  */
 import type { ReactNode } from 'react'
@@ -70,7 +70,7 @@ export function Empty({
  *
  * The id is what the operator quotes and what finds their exact request across every service at
  * once. Beacon sets `x-request-id` on every response including the ones produced before a route
- * matched (`beacon/src/server.ts:251`), so it is present even for a router 404 — which on this
+ * matched (`beacon/src/server.ts`), so it is present even for a router 404 — which on this
  * surface most likely means this bundle was served somewhere the gateway does not route `/v1` to
  * the service. It is rendered in the monospace token and made selectable on its own line, because
  * it is going to be read aloud down a phone line or pasted into a support form.

@@ -20,10 +20,10 @@
  * ── AND `--cf-accent` APPEARS NOWHERE IN A VERDICT RULE, WHICH IS THE POINT ────────────────────
  *
  * This surface's accent IS `--cf-viz-good`'s value: signal green, deliberately the chart `good`
- * step (`ui/packages/ui/src/tokens.css:604-613`). So a verdict drawn in `var(--cf-accent)` would
+ * step (`ui/packages/ui/src/tokens.css`). So a verdict drawn in `var(--cf-accent)` would
  * be green whatever the verdict said, and the headline verdict on this app's landing page is
  * usually `refuse`. The registry states the constraint in the entry itself
- * (`ui/packages/ui/src/surfaces.ts:392-395`): "Beacon's own pages still reserve green/amber/red
+ * (`ui/packages/ui/src/surfaces.ts`): "Beacon's own pages still reserve green/amber/red
  * for probe verdicts."
  *
  * `test/verdict.test.ts` reads this file and fails if `--cf-accent` appears inside any rule whose

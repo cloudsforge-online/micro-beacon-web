@@ -25,7 +25,7 @@ Design authority: [`ecosystem/13-operational-model.md`](https://github.com/cloud
 ## Why this repository exists
 
 The surface registry declares `beacon` with `inSwitcher: true` and `servesUi: false`
-(`ui/packages/ui/src/surfaces.ts:390-407`), so every operator's product switcher has been offering an
+(`ui/packages/ui/src/surfaces.ts`), so every operator's product switcher has been offering an
 entry that 404s. Confirmed through the real gateway before a line was written:
 
 ```bash
@@ -34,11 +34,11 @@ curl -s --cacert ../deploy/gateway/certs/ca.crt -o /dev/null -w '%{http_code}' \
 # → 404
 ```
 
-`deploy/gateway/dynamic/estate-web.yml:432` said so in its own words — *"no bundle is served at
+`deploy/gateway/dynamic/estate-web.yml` said so in its own words — *"no bundle is served at
 `beacon.<apex>`"* — and routed the whole host to the API. This is the bundle that entry now reaches.
 
 **That is fixed, and the registry has been flipped on the measurement.**
-`ui/packages/ui/src/surfaces.ts:446` now reads `servesUi: true`, and `test/hosts.test.ts:100` pins
+`ui/packages/ui/src/surfaces.ts` now reads `servesUi: true`, and `test/hosts.test.ts` pins
 it at `true` — so the day it regresses this README fails rather than becoming the next stale
 inherited claim. Measured live on 2026-08-05: `https://beacon.cloudsforge.online/` → `200
 text/html`. On testnet the same surface is `https://beacon-testnet.cloudsforge.online/` — testnet
@@ -57,14 +57,14 @@ curl -s -H "x-beacon-token: …" http://127.0.0.1:4143/v1/slos
 ```
 
 An objective is *registered*, never derived. `upsertSlo` has exactly one caller in the whole service
-— the admin-only `PUT /v1/slos/:name` (`beacon/src/server.ts:686`) — and Beacon ships no catalogue.
-`deploy/compose/docker-compose.estate.yml:2064-2091` records the consequence, found by running it:
-every `slo_observations` insert fails a foreign key, `jobs.ts:305` catches and warns, `/readyz` stays
+— the admin-only `PUT /v1/slos/:name` (`beacon/src/server.ts`) — and Beacon ships no catalogue.
+`deploy/compose/docker-compose.estate.yml` records the consequence, found by running it:
+every `slo_observations` insert fails a foreign key, `jobs.ts` catches and warns, `/readyz` stays
 green, and *"what is lost is every objective and every error budget — the numbers the gate is
 supposed to gate ON"*.
 
 Trace it into the gate. `collectReasons` emits `error_budget_no_data` and `error_budget_exhausted`
-from **inside a loop** over `await allBudgets(sql, inputs.now)` (`beacon/src/gate.ts:277-298`). With
+from **inside a loop** over `await allBudgets(sql, inputs.now)` (`beacon/src/gate.ts`). With
 no objectives registered that loop body never executes, so the gate emits **neither code, ever**. The
 live answer proves it — `GET /v1/gate?release=probe-1` returns seven reasons and not one of them is
 an `error_budget_*`.
@@ -79,9 +79,9 @@ this console:
 3. states on **the gate's own page**, beside the verdict, that the verdict carries no error-budget
    signal in either direction;
 4. **does not invent an objective.** Two agents refused to before this one, and the compose file
-   refused for the same reason at `:2085-2090`: a threshold nobody agreed to becomes the one the
+   refused for the same reason: a threshold nobody agreed to becomes the one the
    estate is judged by. 99% of scheduled runs is *written down*
-   (`13-operational-model.md:437`); writing it down is not agreeing it, and a browser is the last
+   (`13-operational-model.md`); writing it down is not agreeing it, and a browser is the last
    place it should be decided.
 
 `test/objectives.test.ts` is the most important test in this repository. It asserts against the pure
@@ -110,7 +110,7 @@ error-budget signal, because it does not.
 The release tag lives in the URL rather than in component state, so the address bar carries the
 question: during an incident the useful thing is a link that shows somebody else exactly what you are
 looking at. A malformed tag is rendered as a **validation message and no request is sent** — Beacon
-would refuse the same string with a 400 (`beacon/src/server.ts:913-919`), and a round trip to be told
+would refuse the same string with a 400 (`beacon/src/server.ts`), and a round trip to be told
 what the page already knows reads as a fault.
 
 **An unknown path answers 404, not 200.** nginx enumerates the six routes and everything else falls
@@ -121,7 +121,7 @@ through to `error_page 404 /index.html`, which serves the same bundle while keep
 ### "The gate refused" is not "we could not ask the gate"
 
 A refusal is an **answer**: Beacon looked, the release must not ship, HTTP 200
-(`beacon/src/server.ts:388-392`), and every reason names something somebody can go and fix. A failure
+(`beacon/src/server.ts`), and every reason names something somebody can go and fix. A failure
 to ask is an **absence**: nobody knows anything, least of all this page.
 
 They are two different shapes in `src/lib/verdict.ts` — `Asked` has separate `answered` and
@@ -131,11 +131,11 @@ refusal … retrying is reasonable, and shipping on the strength of it is not."*
 
 The service already models this and the client must not flatten it: `evaluate()` turns a failure to
 gather inputs into a `beacon_unavailable` reason with `determinacy: 'unknown'` and returns it as a
-200 verdict rather than throwing (`beacon/src/gate.ts:368-411`).
+200 verdict rather than throwing (`beacon/src/gate.ts`).
 
 ### A `known` blocker is not a milder `unknown`
 
-They both refuse; only one may ever be waived. `beacon/src/gate.ts:68-74`: *"'ship it anyway, I know
+They both refuse; only one may ever be waived. `beacon/src/gate.ts`: *"'ship it anyway, I know
 about that' is a decision a human can be accountable for and 'ship it anyway, nobody knows' is not a
 decision at all."* So they are **two panels with two headings**, the unknown one first — it is the
 worse of the two and cannot be waived — and it is drawn with a dashed border no other panel uses, in
@@ -158,19 +158,19 @@ all.)
 What *is* rendered is the effect. `waived[]` comes back on every gate answer, so an override in force
 is visible and dated on the page it changes, and the page says where one is made and on what terms —
 admin only, a written reason of at least 16 characters, and a TTL of at most twelve hours
-(`beacon/src/gate.ts:479`, `:499-548`).
+(`addOverride`, `beacon/src/gate.ts`).
 
 ## adminOnly, and the signed-out screen
 
 `beacon` is `adminOnly: true` in the registry and every `/v1` route is authenticated
-(`authorise()`, `beacon/src/server.ts:870-898`). A signed-out visitor gets a **sign-in path, not a
+(`authorise()`, `beacon/src/server.ts`). A signed-out visitor gets a **sign-in path, not a
 broken page and not data** — and `RequiresOperator` renders that panel *instead of* the page, so no
 panel below it mounts and **no request is issued at all**. Driven in a real browser: zero `/v1`
 requests, zero console errors.
 
 The gate asks one question — is there a session — and lets Beacon answer the rest. It predicts no
 role, because `authorise()` accepts any authenticated user principal for `READ_SCOPE` and
-`GATE_SCOPE` (`:895`); a client that predicted the decision would eventually disagree with the
+`GATE_SCOPE`; a client that predicted the decision would eventually disagree with the
 service making it, and would fail closed. When Beacon does refuse, the panel prints its code and its
 request id.
 
@@ -180,19 +180,19 @@ facts.
 
 ## Brand and colour
 
-`data-cf-product="beacon"` names a block that really exists (`ui/packages/ui/src/tokens.css:607-613`)
+`data-cf-product="beacon"` names a block that really exists (`ui/packages/ui/src/tokens.css`)
 and is signal green `#7fae5c` — deliberately the chart `good` step, because for a status tool the
 surface agreeing with its healthiest verdict is correct.
 
 **The consequence is the most important constraint in this bundle.** This page's headline verdict is
 usually `refuse`, and the registry says so in the same note: *"Beacon's own pages still reserve
-green/amber/red for probe verdicts"* (`surfaces.ts:392-395`). A verdict drawn in `var(--cf-accent)`
+green/amber/red for probe verdicts"* (`surfaces.ts`). A verdict drawn in `var(--cf-accent)`
 would render a refusal in the colour of a pass. So every verdict carries **word + glyph + tone —
 three channels, never colour alone** — draws only from the reserved status tokens, and
 `test/verdict.test.ts` plus a CI rule both fail if `--cf-accent` appears in a badge, verdict or tone
 rule. **There is no colour literal anywhere in `src/styles.css`**; every value is `var(--cf-*)`.
 
-`markId` is null for this surface, so nothing here renders a mark, and `brand/plan.ts:43` rules out
+`markId` is null for this surface, so nothing here renders a mark, and `brand/plan.ts` rules out
 an og card for Admin, Lantern and Beacon — so `index.html` carries no `og:` block rather than one
 pointing at a file that does not exist. `test/brand-chrome.test.ts` asserts both absences in both
 directions.
@@ -205,7 +205,7 @@ preview deployment and production.
 
 `vite.config.ts` reads `CF_BEACON_ORIGIN`, and that is a **dev-server** variable rather than a bundle
 one — `vite build` emits nothing from it. It exists because the registry's `devPort` (4011) is a fact
-about the *service* (`beacon/src/env.ts:298`), while this estate's compose republishes the container
+about the *service* (`beacon/src/env.ts`), while this estate's compose republishes the container
 on `127.0.0.1:4143`. The proxy target otherwise comes from the surface registry itself, so there is no
 second copy of a port in this repository to go stale.
 
@@ -221,7 +221,7 @@ curl -s -D- -o /dev/null -X OPTIONS -H 'Origin: http://localhost:5193' \
 # → HTTP/1.1 404 Not Found
 ```
 
-The estate's CORS is one gateway middleware (`deploy/gateway/dynamic/policy.yml:42`) whose allowlist
+The estate's CORS is one gateway middleware (`deploy/gateway/dynamic/policy.yml`) whose allowlist
 names production origins only. Every read here carries an `Authorization` bearer, which is not
 CORS-safelisted, so every one of them preflights. A cross-origin base is therefore not "slower" — it
 is an address from which this page cannot make a single successful request. `resolveApiBase` returns a
@@ -234,7 +234,7 @@ day that changes, this file gets re-read.
 **This repository cannot ship without one change in `micro-deploy`, and it is not written here.**
 
 In production this bundle and `micro-beacon` must share `beacon.<apex>`, because that is the only
-arrangement a browser can use. Today `deploy/gateway/dynamic/estate-web.yml:432` routes the **whole
+arrangement a browser can use. Today `deploy/gateway/dynamic/estate-web.yml` routes the **whole
 host** to the API. Serving this bundle needs a higher-priority path-prefix rule sending `/v1`, `/api`,
 `/metrics`, `/livez` and `/readyz` to `cf-svc-beacon`, with the bundle taking everything else — plus
 a container for `beacon-web` in `docker-compose.estate.yml`.

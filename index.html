@@ -9,9 +9,9 @@
   data-cf-product="beacon" IS CORRECT, AND ITS CONSEQUENCE IS THE MOST IMPORTANT DESIGN
   CONSTRAINT IN THIS BUNDLE.
 
-  The block exists — `ui/packages/ui/src/tokens.css:607-613` names both `beacon` and `status` —
+  The block exists — `ui/packages/ui/src/tokens.css` names both `beacon` and `status` —
   and it is signal green, `#7fae5c`, deliberately the chart `good` step. The registry says why
-  (`ui/packages/ui/src/surfaces.ts:392-395`): "for a status tool the surface agreeing with its
+  (`ui/packages/ui/src/surfaces.ts`): "for a status tool the surface agreeing with its
   healthiest verdict is correct". It then adds the sentence this repository is built around:
   **"Beacon's own pages still reserve green/amber/red for probe verdicts."**
 
@@ -25,7 +25,7 @@
   ══════════════════════════════════════════════════════════════════════════════════════════════
 
   data-cf-substrate="warm" because the ash ramp under a green accent should not be a second
-  cool hue; `tokens.css:167` records that the estate's own reading of the two ramps was made on
+  cool hue; `tokens.css` records that the estate's own reading of the two ramps was made on
   surfaces that set "cool" and on none that set "warm", so this is the one that has had less use
   and it is chosen on the token file's own terms rather than by copying the template.
 -->
@@ -42,7 +42,7 @@
     <meta name="cf-release" content="dev" />
     <!--
       The three favicons from `brand/assets/beacon/`. There is NO og card and no `og:` meta block
-      here, and the absence is read off the brand plan rather than forgotten: `brand/plan.ts:43` —
+      here, and the absence is read off the brand plan rather than forgotten: `brand/plan.ts` —
       "No OG card and no social banner for Admin, Lantern or Beacon." Those surfaces exist to be
       opened by an operator, not shared. `brand/assets/beacon/` holds no og image, and inventing a
       meta tag pointing at a file that does not exist is how a surface ships a broken preview.

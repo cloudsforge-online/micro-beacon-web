@@ -6,7 +6,7 @@
  * THAT WAY.
  *
  * `POST /v1/gate` — the RECORDING form. "Asking the gate a question must not change what the gate
- * would answer next time" (`beacon/src/server.ts:16-18`). A console that recorded a decision every
+ * would answer next time" (`beacon/src/server.ts`). A console that recorded a decision every
  * time somebody typed a release tag would fill `gate_decisions` with evaluations nobody made, and
  * the history panel this app renders reads that table.
  *
@@ -103,14 +103,14 @@ describe('the wire shapes are the ones the service builds', () => {
   const client = readFileSync(join(root, 'src', 'lib', 'beacon.ts'), 'utf8')
 
   it('reads `release`, not `releaseTag`, off a gate answer', () => {
-    // `gateBody()` renames it (`beacon/src/server.ts:849`). The domain type is `GateDecision`,
+    // `gateBody()` renames it (`beacon/src/server.ts`). The domain type is `GateDecision`,
     // whose field is `releaseTag`; reading that off the wire gets `undefined`.
     assert.match(client, /interface GateAnswer \{\s*\n\s*readonly release: string/)
   })
 
   it('types every budget count as a string', () => {
     // They are bigints, and a JSON number above 2^53 has already lost its low bits by the time
-    // anyone reads it (`beacon/src/server.ts:669-671`).
+    // anyone reads it (`beacon/src/server.ts`).
     const budget = /interface ErrorBudget \{([\s\S]*?)\n\}/.exec(client)
     assert.ok(budget)
     for (const field of ['total', 'good', 'bad', 'allowedBad', 'remaining', 'consumedPpm']) {

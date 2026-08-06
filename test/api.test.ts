@@ -36,7 +36,7 @@ afterEach(() => {
 
 describe('the error envelope', () => {
   it('reads the nested shape Beacon actually sends', () => {
-    // `errorReply()`, beacon/src/server.ts:995-997. The template read this as FLAT and assigned
+    // `errorReply()`, beacon/src/server.ts. The template read this as FLAT and assigned
     // `data.error` — an object — straight to the displayed message, so every server-side failure
     // rendered as `[object Object]` with the request id present and discarded.
     const parsed = readErrorBody({
@@ -117,7 +117,7 @@ describe('what reaches fetch', () => {
 
 describe('a refusal is not an error', () => {
   it('resolves with the verdict when the gate refuses', async () => {
-    // HTTP 200 for `refuse` (beacon/src/server.ts:388-392). A client that treated a 4xx as the
+    // HTTP 200 for `refuse` (beacon/src/server.ts). A client that treated a 4xx as the
     // refusal signal would make a refused release indistinguishable from a malformed request.
     const stub = installFetch(() =>
       json(200, {

@@ -77,7 +77,7 @@ describe('this surface has no og card, and that is a brand-plan decision', () =>
   })
 
   it('ships no og image, so no meta tag could point at one', () => {
-    // `brand/plan.ts:43` — "No OG card and no social banner for Admin, Lantern or Beacon. Those
+    // `brand/plan.ts` — "No OG card and no social banner for Admin, Lantern or Beacon. Those
     // kinds exist to be opened by an operator, not shared." Inventing a meta tag pointing at a
     // file that does not exist is how a surface ships a broken preview.
     assert.equal(existsSync(join(root, 'public', 'og-1200x630.png')), false)

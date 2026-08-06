@@ -1,7 +1,7 @@
 /**
  * Open incidents, and which of them block a release.
  *
- * SEV1 and SEV2 block; SEV3 and SEV4 do not (`blocksRelease`, `beacon/src/gate.ts:341`). Every row
+ * SEV1 and SEV2 block; SEV3 and SEV4 do not (`blocksRelease`, `beacon/src/gate.ts`). Every row
  * says which it is, because the difference is the difference between "this is why the estate will
  * not ship" and "this is a thing we know about". The service's reasoning for not blocking on the
  * lower two is worth keeping in front of a reader: refusing on SEV3 "would mean the estate could
@@ -9,7 +9,7 @@
  * gets switched off".
  *
  * The open/recent filter re-issues the request, and here it genuinely must: `GET /v1/incidents`
- * changes what it returns based on `?open=true` (`beacon/src/server.ts:562-569`), so a filter that
+ * changes what it returns based on `?open=true` (`beacon/src/server.ts`), so a filter that
  * did not re-ask would show the closed incidents from the previous answer under the word "open".
  * That is the failure `src/lib/resource.ts` describes at length in the note on `deps`.
  */

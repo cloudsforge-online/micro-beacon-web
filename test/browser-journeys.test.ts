@@ -53,8 +53,8 @@ const SIGNED_IN = { 'cf.accessToken': 'test-access', 'cf.refreshToken': 'test-re
  *
  * The one bridge across an origin is the portal hand-off (`@cloudsforge/ui`: `signInRedirect`,
  * then `consumeAuthCallback` redeeming at `POST /auth/handoff/redeem`), and `admin-web` has always
- * crossed it — `ProtectedRoute` (admin-web/src/lib/auth.tsx:202-215) sends an anonymous visitor to
- * the portal, which hands a held session straight back (hub-web/src/pages/account.tsx:220-236)
+ * crossed it — `ProtectedRoute` (admin-web/src/lib/auth.tsx) sends an anonymous visitor to
+ * the portal, which hands a held session straight back (hub-web/src/pages/account.tsx)
  * without a second credential prompt. This surface never asked.
  *
  * So the stand-in below is the PORTAL, not this app: it answers `GET /account/login` and either
