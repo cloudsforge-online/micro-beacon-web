@@ -8,16 +8,16 @@
  * `ProtectedRoute`, and the explanation is right for that surface: every `micro-indexer` route it
  * calls is anonymous, so "nothing on this surface can produce a 401", and a gate there would
  * demand a session for public chain facts. It cites
- * `docs/ecosystem/15-monetisation-model.md:50` — "A public chain whose explorer is paywalled is
+ * `docs/ecosystem/15-monetisation-model.md` — "A public chain whose explorer is paywalled is
  * not a public chain."
  *
  * **This surface is the exact inverse, on both halves of that sentence.**
  *
  *   * Every route this bundle calls is authenticated. `authorise()` at
- *     `beacon/src/server.ts:870-898` checks the static break-glass token and then requires an
+ *     `beacon/src/server.ts` checks the static break-glass token and then requires an
  *     identity JWT; there is no anonymous branch on any `/v1` route. A signed-out visitor firing
  *     the six reads gets six 401s.
- *   * `beacon` is `adminOnly: true` in the registry (`ui/packages/ui/src/surfaces.ts:448`), and
+ *   * `beacon` is `adminOnly: true` in the registry (`ui/packages/ui/src/surfaces.ts`), and
  *     what these pages show is not public: open incident subjects, their last error strings, which
  *     journeys are muted and by whom. `beacon/src/publicstatus.ts` exists precisely because that
  *     material has to be PROJECTED away before it can be shown to anybody — that projection is
@@ -32,8 +32,8 @@
  *
  * **It does not check roles.** `beacon` is `adminOnly` in the registry, but that flag governs the
  * SWITCHER — "it just keeps a menu entry nobody can open out of every player's face"
- * (`ui/packages/ui/src/surfaces.ts:308-312`) — and `authorise()` accepts ANY authenticated user
- * principal for `READ_SCOPE` and `GATE_SCOPE` (`beacon/src/server.ts:895`). Only the write routes
+ * (`ui/packages/ui/src/surfaces.ts`) — and `authorise()` accepts ANY authenticated user
+ * principal for `READ_SCOPE` and `GATE_SCOPE` (`beacon/src/server.ts`). Only the write routes
  * pass `adminOnly: true`, and this bundle calls none of them.
  *
  * A client that predicted the authorisation decision would eventually disagree with the service

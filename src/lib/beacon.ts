@@ -6,11 +6,11 @@
  * not pedantry:
  *
  *   * `GET /v1/gate` answers `{release, decision, promote, indeterminate, reasons, waived}` —
- *     `gateBody()` at `beacon/src/server.ts:842-857`. The domain type is `GateDecision`, whose
+ *     `gateBody()` at `beacon/src/server.ts`. The domain type is `GateDecision`, whose
  *     field is `releaseTag`. Reading `releaseTag` off the wire gets `undefined`.
  *   * `GET /v1/slos` answers every count as a **decimal STRING**, because they are bigints and a
  *     JSON number above 2^53 has already lost its low bits by the time anyone reads it
- *     (`beacon/src/server.ts:669-681`). `objectivePpm` is a string for the same reason. Nothing
+ *     (`beacon/src/server.ts`). `objectivePpm` is a string for the same reason. Nothing
  *     here parses one into a `number` without saying why.
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
@@ -18,7 +18,7 @@
  *
  * There are two gate endpoints and they differ by one word in the service's own header: "The route
  * is a GET and it does **not** record by default. Asking the gate a question must not change what
- * the gate would answer next time" (`beacon/src/server.ts:16-18`). `POST /v1/gate` is the
+ * the gate would answer next time" (`beacon/src/server.ts`). `POST /v1/gate` is the
  * recording form, used at the moment of an actual promotion — by `beacon/src/cli.ts`, from a
  * pipeline, with an exit code attached.
  *
@@ -31,29 +31,29 @@
  *
  * ── `POST /v1/gate/overrides` is also absent, and that is a decision rather than an omission ───
  *
- * Break-glass is real, it is admin-only, and `addOverride` (`beacon/src/gate.ts:499-548`) enforces
+ * Break-glass is real, it is admin-only, and `addOverride` (`beacon/src/gate.ts`) enforces
  * three things at the point of creation: an indeterminate reason code is refused outright, the
  * written reason must be at least 16 characters, and the TTL must be positive and at most twelve
- * hours (`MAX_OVERRIDE_TTL_MS`, `beacon/src/gate.ts:479`). This bundle offers no form for it, for
+ * hours (`MAX_OVERRIDE_TTL_MS`, `beacon/src/gate.ts`). This bundle offers no form for it, for
  * four reasons, in ascending order of weight:
  *
  *   1. It is a WRITE that decides whether the estate ships. Every other control on this surface is
  *      a read, and a console whose only write is the one that overrides the release gate is a
  *      console where the destructive action is the easiest thing to reach.
  *   2. The author of an override is taken from the TOKEN and never from the body
- *      (`beacon/src/server.ts:436-438`), which is correct — and it means the accountability the
+ *      (`beacon/src/server.ts`), which is correct — and it means the accountability the
  *      mechanism rests on is already carried by whatever authenticated. A browser form adds a text
  *      field and a click; it does not add accountability.
  *   3. **In the estate as it stands today, every override anyone could type would be refused.**
  *      The live gate is `indeterminate: true` because of `conformance_never_run`, and an
  *      indeterminate evaluation refuses before any override is consulted at all — `decide()`
- *      returns on the unknown branch FIRST, and `beacon/src/gate.ts:141-148` says the branch is
+ *      returns on the unknown branch FIRST, and `beacon/src/gate.ts` says the branch is
  *      first precisely so that a waiver step added later cannot reach it. A button that cannot
  *      work is worse than no button: it teaches an operator that the gate is arbitrary.
  *   4. The one that decided it. A form with a reason-code dropdown puts `journey_skipped` and
  *      `conformance_never_run` in the same list, greys one out, and thereby presents an unknown as
  *      a waivable variant of a known. **That is the exact conflation this whole surface exists to
- *      prevent.** `beacon/src/gate.ts:485` states the rule in capitals and gives the reasoning:
+ *      prevent.** `beacon/src/gate.ts` states the rule in capitals and gives the reasoning:
  *      "ship it anyway, I know about that" is a decision a human can be accountable for and "ship
  *      it anyway, nobody knows" is not a decision at all.
  *
@@ -67,7 +67,7 @@ import { api } from './api.ts'
 /* ══════════════════════════════ the gate ══════════════════════════════ */
 
 /**
- * Every reason the gate can give, as a closed set — `beacon/src/gate.ts:51-66`.
+ * Every reason the gate can give, as a closed set — `beacon/src/gate.ts`.
  *
  * Mirrored here rather than imported, because this bundle has no dependency on the service's
  * source, and pinned against it by `test/verdict.test.ts`, which reads `../beacon/src/gate.ts`
@@ -112,7 +112,7 @@ export interface GateReason {
   readonly determinacy: Determinacy
 }
 
-/** `gateBody()`, `beacon/src/server.ts:842-857`. Note `release`, not `releaseTag`. */
+/** `gateBody()`, `beacon/src/server.ts`. Note `release`, not `releaseTag`. */
 export interface GateAnswer {
   readonly release: string
   readonly decision: GateVerdict
@@ -122,7 +122,7 @@ export interface GateAnswer {
   readonly waived: readonly GateReason[]
 }
 
-/** One row of `GET /v1/gate/history` — `decisionHistory`, `beacon/src/gate.ts:430-458`. */
+/** One row of `GET /v1/gate/history` — `decisionHistory`, `beacon/src/gate.ts`. */
 export interface RecordedDecision {
   readonly releaseTag: string
   readonly decision: GateVerdict
@@ -130,7 +130,7 @@ export interface RecordedDecision {
   /**
    * Always empty on a recorded decision, and that is the SERVICE's doing rather than a gap here:
    * `decisionHistory` sets `waived: []` because the column does not exist
-   * (`beacon/src/gate.ts:455`). The history panel therefore does not render a waived list, because
+   * (`beacon/src/gate.ts`). The history panel therefore does not render a waived list, because
    * rendering an always-empty one would say "nothing was waived" about a promotion that may well
    * have been.
    */
@@ -146,7 +146,7 @@ export interface GateHistory {
 }
 
 /**
- * The release tag Beacon accepts, byte-for-byte from `RELEASE_TAG`, `beacon/src/server.ts:192`.
+ * The release tag Beacon accepts, byte-for-byte from `RELEASE_TAG`, `beacon/src/server.ts`.
  *
  * Mirrored so the page can say "that is not a release tag" without a round trip, and pinned
  * against the source by `test/verdict.test.ts`. It is NOT a replacement for the server's check:
@@ -158,7 +158,7 @@ export const RELEASE_TAG = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/
 /**
  * Ask the gate. **Read-only, and always a GET.**
  *
- * Answers HTTP 200 for `refuse` as well — `beacon/src/server.ts:388-392`: "the REFUSAL is the
+ * Answers HTTP 200 for `refuse` as well — `beacon/src/server.ts`: "the REFUSAL is the
  * answer, and answering with a 4xx would make a refused release indistinguishable from a
  * malformed request to every retry wrapper ever written". So a rejected promotion arrives here as
  * a resolved promise carrying a verdict, and never as a thrown `ApiError`. Anything this function
@@ -174,7 +174,7 @@ export const gateHistory = (release: string, signal?: AbortSignal): Promise<Gate
 
 export type JourneyStatus = 'pass' | 'fail' | 'error' | 'skip'
 
-/** `GET /v1/journeys` — `beacon/src/server.ts:523-537`. */
+/** `GET /v1/journeys` — `beacon/src/server.ts`. */
 export interface Journey {
   readonly name: string
   readonly title: string
@@ -195,7 +195,7 @@ export const listJourneys = (signal?: AbortSignal): Promise<{ journeys: readonly
 
 export type ProbeState = 'up' | 'down' | 'degraded' | 'pending'
 
-/** `GET /v1/probes` — `beacon/src/server.ts:487-501`. */
+/** `GET /v1/probes` — `beacon/src/server.ts`. */
 export interface Probe {
   readonly name: string
   readonly target: string
@@ -210,8 +210,8 @@ export interface Probe {
   /**
    * `pending` when the probe has never reported. The service is explicit that this is not zero:
    * "A probe that has never run publishes nothing rather than 0"
-   * (`beacon/src/server.ts:111`), and `scrapeRefresh` skips it entirely rather than setting a
-   * gauge (`:775-777`). This page follows the same rule in words.
+   * (`beacon/src/server.ts`), and `scrapeRefresh` skips it entirely rather than setting a
+   * gauge. This page follows the same rule in words.
    */
   readonly state: ProbeState
   readonly since: string | null
@@ -224,7 +224,7 @@ export const listProbes = (signal?: AbortSignal): Promise<{ probes: readonly Pro
 
 export type Severity = 'sev1' | 'sev2' | 'sev3' | 'sev4'
 
-/** `GET /v1/incidents?open=true` — `beacon/src/server.ts:562-569`. */
+/** `GET /v1/incidents?open=true` — `beacon/src/server.ts`. */
 export interface Incident {
   readonly id: string
   readonly scope: string
@@ -247,7 +247,7 @@ export const listIncidents = (
   api('/v1/incidents', { query: { open }, ...(signal ? { signal } : {}) })
 
 /**
- * SEV1 and SEV2 block a release; SEV3 and SEV4 do not — `blocksRelease`, `beacon/src/gate.ts:341`.
+ * SEV1 and SEV2 block a release; SEV3 and SEV4 do not — `blocksRelease`, `beacon/src/gate.ts`.
  *
  * Mirrored so the incident list can mark which rows are gate inputs. The reasoning is the
  * service's and worth carrying: refusing on SEV3 "would mean the estate could not ship the fix for
@@ -259,7 +259,7 @@ export function blocksRelease(severity: Severity): boolean {
 
 /* ══════════════════════════════ conformance ══════════════════════════════ */
 
-/** `GET /v1/conformance` — `beacon/src/server.ts:710-713`. */
+/** `GET /v1/conformance` — `beacon/src/server.ts`. */
 export interface ConformanceRun {
   readonly suite: string
   readonly status: string
@@ -282,7 +282,7 @@ export const listConformance = (
 /**
  * One registered objective. **Every count on this route is a decimal STRING.**
  *
- * `beacon/src/server.ts:662-668` explains `objectivePpm`: it is a bigint, and `JSON.stringify`
+ * `beacon/src/server.ts` explains `objectivePpm`: it is a bigint, and `JSON.stringify`
  * THROWS on one rather than coercing it, so it is converted explicitly "so the failure mode is a
  * decimal string on the wire rather than a 500 on a read-only route the first time an SLO exists".
  */
@@ -309,7 +309,7 @@ export interface ErrorBudget {
   /**
    * True when the window holds no observations at all.
    *
-   * The service's words, at `beacon/src/gate.ts:278-281`: "Zero observations is not 100%
+   * The service's words, at `beacon/src/gate.ts`: "Zero observations is not 100%
    * availability. A service nothing has measured has not demonstrated anything, and treating an
    * empty window as perfect is how a broken collector reads as a perfect estate." An
    * indeterminate budget becomes an `error_budget_no_data` reason, which is an `unknown`, which

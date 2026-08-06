@@ -5,7 +5,7 @@
  * AN EMPTY LIST HERE IS THE REASON THE LIVE GATE IS INDETERMINATE.
  *
  * `collectReasons` emits `conformance_never_run` when `latestConformance` returns nothing
- * (`beacon/src/gate.ts:302-305`). That code is an **unknown** — it cannot be waived by any
+ * (`beacon/src/gate.ts`). That code is an **unknown** — it cannot be waived by any
  * override — and one unknown makes the whole evaluation indeterminate, which refuses before
  * anything else is even looked at. So the empty panel below is not a quiet corner of this console;
  * it is the single reason every release in this estate is currently refused with
@@ -123,7 +123,7 @@ export function ConformancePage() {
                   <div>
                     {/* Its own column, never folded into a total. The service is explicit that a
                         suite which could not be run reports here rather than under passed
-                        (`beacon/src/server.ts:147`). */}
+                        (`beacon/src/server.ts`). */}
                     <dt>Skipped</dt>
                     <dd className="cf-num">{run.skipped}</dd>
                   </div>

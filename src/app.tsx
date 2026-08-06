@@ -17,7 +17,7 @@
  *     `useResource` in any panel fires. A signed-out visitor to this console sees one sentence and
  *     a button, never a screen made of six identical 401s.
  *
- * Every route this bundle calls is authenticated (`authorise()`, `beacon/src/server.ts:870-898`)
+ * Every route this bundle calls is authenticated (`authorise()`, `beacon/src/server.ts`)
  * and `beacon` is `adminOnly: true` in the registry, so there is no route here that could be public
  * and none is offered as one. `src/lib/auth.tsx` documents the contrast with `micro-explorer-web`,
  * whose reads are anonymous and which deliberately has no gate at all.

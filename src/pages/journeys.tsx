@@ -3,11 +3,11 @@
  *
  * Two things this page will not do, both taken from the service's own reasoning:
  *
- *   * **A skip is never rendered as a pass.** `beacon/src/gate.ts:237-241`: "A skip is never green.
+ *   * **A skip is never rendered as a pass.** `beacon/src/gate.ts`: "A skip is never green.
  *     It counts against the journey exactly as a failure would, because the journeys that quietly
  *     did nothing are the easiest ones to fake." The gauge agrees — a skip publishes 0.5, and the
  *     help text says "A skip is never 1: not-run is not passed"
- *     (`beacon/src/server.ts:117`).
+ *     (`beacon/src/server.ts`).
  *   * **A journey with no run is not a journey that is fine.** `lastStatus` is null when nothing
  *     has ever run, and null renders as the word "never", never as a blank cell.
  *
@@ -109,7 +109,7 @@ export function JourneysPage() {
           </strong>{' '}
           A muted journey is not a passing journey; it is an unmeasured one, and it is a{' '}
           <em>known</em> blocker rather than an unknown because somebody chose it and left their
-          name on it (<code className="cf-num bw-code">beacon/src/gate.ts:201-212</code>).
+          name on it (<code className="cf-num bw-code">beacon/src/gate.ts</code>).
         </Note>
       )}
 

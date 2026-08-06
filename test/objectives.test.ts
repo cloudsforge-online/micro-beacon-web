@@ -11,7 +11,7 @@
  *
  * Trace it into the gate. `collectReasons` emits `error_budget_no_data` and
  * `error_budget_exhausted` from INSIDE a loop over `await allBudgets(sql, inputs.now)`
- * (`beacon/src/gate.ts:277-298`). With no objectives that loop body never executes, so the gate
+ * (`beacon/src/gate.ts`). With no objectives that loop body never executes, so the gate
  * emits neither code, ever. The release gate is not checking error budgets at all — and nothing
  * anywhere says so. A naive panel would render "Error budgets: no problems", in green, which is
  * the exact false-green this estate keeps shipping.
@@ -38,10 +38,11 @@
  *                    problems". A reader skimming a panel reads the adjective, not the paragraph.
  *
  * `citations` is excluded from the prose sweeps, deliberately and with the exclusion stated here
- * rather than buried: it holds `file.ts:277-298` line references, which contain digits that are
- * not figures about a budget. Excluding it is a hole, so it is narrowed — the sweep still requires
- * every citation to LOOK like a citation (`path:line`), so prose cannot be smuggled into the field
- * to escape the check.
+ * rather than buried: it holds paths into micro-beacon, and a path carries digits that are not
+ * figures about a budget. Excluding it is a hole, so it is narrowed — the sweep still requires
+ * every citation to LOOK like one: a path, an em dash, and the claim read there. It used to
+ * require a LINE as well, and that requirement is gone, because a line names a position in a file
+ * micro-beacon owns and is free to edit. See the assertion itself for what replaced it.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  */
 import assert from 'node:assert/strict'
@@ -134,9 +135,22 @@ describe('the empty objectives table is never rendered as healthy', () => {
     if (panel.kind !== 'no-objectives') throw new Error('unreachable')
     assert.ok(panel.citations.length >= 3)
     for (const citation of panel.citations) {
-      // `path:line` or `path:line-line`. This is what keeps `citations` from becoming the field
-      // prose is moved into to escape the sweeps above.
-      assert.match(citation, /^[\w./-]+\.(ts|yml|md):\d+(-\d+)?\s+—\s+\S/, citation)
+      // A repository-relative PATH, an em dash, and the claim read there. This is what keeps
+      // `citations` from becoming the field prose is moved into to escape the sweeps above.
+      assert.match(citation, /^[\w./-]+\.(ts|yml|md)\s+—\s+\S/, citation)
+      /*
+       * AND NO LINE NUMBER, WHICH IS THE HALF THIS ASSERTION USED TO REQUIRE.
+       *
+       * It demanded `path:line`. A line number names a position in a file that a DIFFERENT
+       * repository owns and is free to edit: micro-beacon inserts a helper above `collectReasons`
+       * and all four of these go stale at once, while nothing in this bundle is wrong. Nothing
+       * runs this suite when micro-beacon changes, so it surfaces during a release — which is how
+       * one shape of citation produced seven of nineteen CI failures across the estate in a day.
+       *
+       * The claim after the dash is what makes a citation checkable, and it names a SYMBOL —
+       * `collectReasons`, `upsertSlo` — which moves with the code. The line never did.
+       */
+      assert.doesNotMatch(citation, /\.(ts|yml|md):\d/, `${citation} names a line; cite the file`)
     }
   })
 })

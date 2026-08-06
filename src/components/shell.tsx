@@ -7,13 +7,13 @@
  *
  * ── There is no mark and no wordmark here, and that is read off the registry ───────────────────
  *
- * `beacon` carries `markId: null` (`ui/packages/ui/src/surfaces.ts:421`), so `Mark surface="beacon"`
- * draws nothing at all (`hasMark`, `ui/packages/ui/src/index.tsx:720-722`). Nothing in this file is
+ * `beacon` carries `markId: null` (`ui/packages/ui/src/surfaces.ts`), so `Mark surface="beacon"`
+ * draws nothing at all (`hasMark`, `ui/packages/ui/src/index.tsx`). Nothing in this file is
  * designed around a mark. `brand/assets/beacon/` does hold a `mark-1024x1024.png`, which is the
  * SOURCE the favicons were cut from rather than a mark the registry declares —
  * `test/brand-chrome.test.ts` asserts the absence in both directions, so a mark appearing in the
  * registry later fails the build and forces a decision rather than being copied in by reflex.
- * `brand/plan.ts:43` also rules out an og card for this surface, which is why index.html carries no
+ * `brand/plan.ts` also rules out an og card for this surface, which is why index.html carries no
  * `og:` block.
  */
 import { useEffect } from 'react'
@@ -47,7 +47,7 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
         state the link exists to prevent, and it is invisible to everyone who does not use it.
 
         `SkipLink` and `MainRegion` set the href and the pair `id` + `tabIndex` from ONE constant
-        (`MAIN_ID`, `ui/packages/ui/src/index.tsx:1033`), so the two halves cannot disagree again.
+        (`MAIN_ID`, `ui/packages/ui/src/index.tsx`), so the two halves cannot disagree again.
         The id is `cf-main` now rather than `main`. Grepped rather than assumed: two things named
         the old one — the anchor being deleted with it, and `assertSkipLink`'s default target in
         test/journeys/axe.ts, which now reads `MAIN_ID` instead of spelling a landmark's name for a
@@ -119,13 +119,13 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
       {/*
         The company footer, from @cloudsforge/ui, and NEVER a local copy. Every link is derived from
         the surface registry, so a new product appears here without this file changing. `beacon`
-        became `servesUi: true` (`ui/packages/ui/src/surfaces.ts:446`), which means all sixteen other
+        became `servesUi: true` (`ui/packages/ui/src/surfaces.ts`), which means all sixteen other
         surfaces now derive a link TO this one from that same row — and until this commit the page
         they arrived at rendered no footer at all and offered no way back.
 
         IT IS OUTSIDE THE GATE ON PURPOSE. `app.tsx` wraps each PAGE in `<Gate>`, not the shell, so
         a signed-out visitor gets the sign-in panel inside `<main>` with this footer underneath it.
-        On an `adminOnly` surface (`surfaces.ts:448`) that is the state that matters most: the
+        On an `adminOnly` surface (`surfaces.ts`) that is the state that matters most: the
         reader who cannot sign in is the one with nothing else on the screen to navigate by.
 
         ── THE NOTE IS THE OPPOSITE OF `status`'s, AND THAT IS WHY IT IS WORTH SAYING ──────────────
@@ -158,9 +158,9 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
         the regulation is about.
 
         ON THIS SURFACE IT RENDERS NOTHING, TODAY AND ON PURPOSE. `CookieBanner` returns null when
-        `analyticsId()` is null (`ui/packages/ui/src/index.tsx:1196`), and it is null here because
+        `analyticsId()` is null (`ui/packages/ui/src/index.tsx`), and it is null here because
         index.html carries no `<meta name="cf-analytics">` — see the long note where that tag would
-        have gone, which comes down to `beacon` being `adminOnly: true` (`surfaces.ts:448`): GA4
+        have gone, which comes down to `beacon` being `adminOnly: true` (`surfaces.ts`): GA4
         reports `page_location`, so a hit from an operator console ships the estate's own addresses
         to a third party.
 
@@ -200,8 +200,8 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
  *
  * ── The robots directive is DERIVED, and there is no override here ────────────────────────────
  *
- * `robotsDirective()` (`ui/packages/ui/src/seo.ts:139-142`) reads `servesUi` and `adminOnly` and
- * nothing else, and `beacon` carries `adminOnly: true` (`ui/packages/ui/src/surfaces.ts:448`), so
+ * `robotsDirective()` (`ui/packages/ui/src/seo.ts`) reads `servesUi` and `adminOnly` and
+ * nothing else, and `beacon` carries `adminOnly: true` (`ui/packages/ui/src/surfaces.ts`), so
  * every page here resolves to `noindex, nofollow` — which is the same string index.html states
  * statically. `test/sitemap.test.ts` asserts the two agree by CALLING `surfaceMeta` rather than by
  * retyping it, so a registry row that stopped being `adminOnly` would go red here instead of
@@ -210,7 +210,7 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
  * ── The one tag this emits that this surface cannot honour ────────────────────────────────────
  *
  * `og:image` and `twitter:image`, which `metaTags` composes from `DEFAULT_OG_IMAGE` —
- * `/og-1200x630.png` — and this surface deliberately ships no such file: `brand/plan.ts:43` says
+ * `/og-1200x630.png` — and this surface deliberately ships no such file: `brand/plan.ts` says
  * "No OG card and no social banner for Admin, Lantern or Beacon", and `test/brand-chrome.test.ts`
  * asserts the absence in both directions.
  *

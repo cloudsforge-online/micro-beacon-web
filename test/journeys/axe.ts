@@ -304,7 +304,7 @@ export async function assertSkipLink(
   where: string,
   // `MAIN_ID` and not the string `main`, which is what this default used to be. The shell renders
   // `<SkipLink>` and `<MainRegion>` from @cloudsforge/ui, and both compose their href and their id
-  // from that one constant (`ui/packages/ui/src/index.tsx:1033`) — so a default typed out here
+  // from that one constant (`ui/packages/ui/src/index.tsx`) — so a default typed out here
   // would be a fourth opinion about the landmark's name, and the first caller of this helper would
   // have found it wrong. The parameter stays, for a surface that keeps its own `<main>`.
   target = `#${MAIN_ID}`,

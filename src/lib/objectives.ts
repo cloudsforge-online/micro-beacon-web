@@ -11,15 +11,15 @@
  *   → {"slos":[],"budgets":[]}
  *
  * An objective is REGISTERED, never derived. `upsertSlo` has exactly one caller in the whole
- * service — the admin-only `PUT /v1/slos/:name` (`beacon/src/server.ts:686`) — and Beacon ships no
- * catalogue. `deploy/compose/docker-compose.estate.yml:2064-2091` records the consequence found by
- * running it: every `slo_observations` insert fails a foreign key, `jobs.ts:305` catches and warns,
+ * service — the admin-only `PUT /v1/slos/:name` (`beacon/src/server.ts`) — and Beacon ships no
+ * catalogue. `deploy/compose/docker-compose.estate.yml` records the consequence found by
+ * running it: every `slo_observations` insert fails a foreign key, `jobs.ts` catches and warns,
  * the service stays healthy, and "what is lost is every objective and every error budget — the
  * numbers the gate is supposed to gate ON".
  *
  * Trace it through the gate. `collectReasons` emits `error_budget_no_data` and
  * `error_budget_exhausted` from INSIDE a loop over `await allBudgets(sql, inputs.now)`
- * (`beacon/src/gate.ts:277-298`). With no objectives registered that loop body never executes, so
+ * (`beacon/src/gate.ts`). With no objectives registered that loop body never executes, so
  * the gate emits **neither code, ever**. It is not checking error budgets at all — and it does not
  * say so. The live answer proves it: `GET /v1/gate?release=probe-1` returns seven reasons and not
  * one of them is an `error_budget_*`.
@@ -36,8 +36,8 @@
  *      only a sentence can tell them apart.
  *   4. **It does not invent an objective.** Two agents refused to before this one, on the grounds
  *      that a threshold nobody agreed to becomes the one the estate is judged by; the compose file
- *      refused for the same reason at `:2085-2090`, while noting that 99% of scheduled runs is
- *      written down in `13-operational-model.md:437`. Writing it down is not the same as agreeing
+ *      refused for the same reason, while noting that 99% of scheduled runs is
+ *      written down in `13-operational-model.md`. Writing it down is not the same as agreeing
  *      it, and a browser is the last place it should be decided.
  *
  * `test/objectives.test.ts` is the most important test in this repository. It asserts that
@@ -135,10 +135,10 @@ export function describeBudgets(objectives: Objectives): BudgetPanel {
         'worse than showing none — a threshold nobody agreed to becomes the one the estate ' +
         'is judged by.',
       citations: [
-        'beacon/src/gate.ts:277-298 — collectReasons emits error_budget_* only from inside the budget loop',
-        'beacon/src/server.ts:686 — PUT /v1/slos/:name is the only caller of upsertSlo',
-        'beacon/src/gate.ts:278-281 — zero observations is not full availability',
-        'deploy/compose/docker-compose.estate.yml:2064-2091 — every slo_observations insert fails, and why it was not fixed there',
+        'beacon/src/gate.ts — collectReasons emits error_budget_* only from inside the budget loop',
+        'beacon/src/server.ts — PUT /v1/slos/:name is the only caller of upsertSlo',
+        'beacon/src/gate.ts — zero observations is not full availability',
+        'deploy/compose/docker-compose.estate.yml — every slo_observations insert fails, and why it was not fixed there',
       ],
     }
   }
@@ -157,7 +157,7 @@ export function describeBudgets(objectives: Objectives): BudgetPanel {
  * One budget as a voice.
  *
  * `indeterminate` is checked FIRST, and the order is the service's: `collectReasons` tests it
- * before `exhausted` (`beacon/src/gate.ts:278-287`), because a window with no observations in it
+ * before `exhausted` (`beacon/src/gate.ts`), because a window with no observations in it
  * has no consumption to report and a page that showed one would be showing arithmetic over an
  * empty set.
  */
@@ -190,7 +190,7 @@ export function budgetRow(budget: ErrorBudget): BudgetRow {
     slo: budget.slo,
     voice,
     // The service's strings, unparsed. They are bigints on the wire for a reason
-    // (`beacon/src/server.ts:669-671`), and a JSON number above 2^53 has already lost its low bits
+    // (`beacon/src/server.ts`), and a JSON number above 2^53 has already lost its low bits
     // by the time anyone reads it. Turning one into a `number` here to format it would reintroduce
     // exactly the loss the wire format exists to avoid.
     remaining: budget.remaining,

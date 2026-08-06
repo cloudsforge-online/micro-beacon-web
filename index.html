@@ -9,9 +9,9 @@
   data-cf-product="beacon" IS CORRECT, AND ITS CONSEQUENCE IS THE MOST IMPORTANT DESIGN
   CONSTRAINT IN THIS BUNDLE.
 
-  The block exists — `ui/packages/ui/src/tokens.css:943-955` names both `beacon` and `status` —
+  The block exists — `ui/packages/ui/src/tokens.css` names both `beacon` and `status` —
   and it is signal green, `#7fae5c`, deliberately the chart `good` step. The registry says why
-  (`ui/packages/ui/src/surfaces.ts:416-418`): "for a status tool the surface agreeing with its
+  (`ui/packages/ui/src/surfaces.ts`): "for a status tool the surface agreeing with its
   healthiest verdict is correct". It then adds the sentence this repository is built around:
   **"Beacon's own pages still reserve green/amber/red for probe verdicts."**
 
@@ -25,18 +25,18 @@
   ══════════════════════════════════════════════════════════════════════════════════════════════
 
   data-cf-substrate="warm" because the ash ramp under a green accent should not be a second
-  cool hue; `tokens.css:467` records that the estate's own reading of the two ramps was made on
+  cool hue; `tokens.css` records that the estate's own reading of the two ramps was made on
   surfaces that set "cool" and on none that set "warm", so this is the one that has had less use
   and it is chosen on the token file's own terms rather than by copying the template.
 
   data-cf-scheme is the third of the three, added with @cloudsforge/ui 1.1
-  (`ui/packages/ui/src/tokens.css:1013-1023`). `auto` follows the reader's operating system;
+  (`ui/packages/ui/src/tokens.css`). `auto` follows the reader's operating system;
   `light` and `dark` force one. It is set here, statically, for the same reason the other two are —
   a page that paints before the attribute lands flashes the default and then changes colour, and a
   theme flash is worse than a theme nobody asked for.
 
   `auto` and not `dark`, on a surface that was built and reviewed dark, because the light ramp is
-  now measured rather than guessed: `tokens.css:1164-1169` records that `--cf-viz-good` and
+  now measured rather than guessed: `tokens.css` records that `--cf-viz-good` and
   `--cf-viz-warn` are RE-TUNED for the light scheme while `--cf-viz-crit` deliberately is not — it
   measures 3.95:1 on the light panel unaided — so the three reserved verdict hues survive the
   switch with their meanings intact. That is the only property this surface could not have
@@ -45,8 +45,8 @@
   WHAT THE LIGHT RAMP DOES NOT SURVIVE IS THE VERDICT AS **TYPE**, and that is what changed in
   src/styles.css alongside this attribute. The `--cf-viz-*` trio is measured against the 3:1
   NON-TEXT floor, which is the right floor for the border of a panel and the wrong one for a word:
-  on the light scheme `--cf-viz-good` becomes `#6d964f` (`tokens.css:1164`) while the text step
-  `--cf-good-text` becomes `#4b6935` at 4.59:1 (`tokens.css:1126-1127`), and the same fork happens
+  on the light scheme `--cf-viz-good` becomes `#6d964f` (`tokens.css`) while the text step
+  `--cf-good-text` becomes `#4b6935` at 4.59:1 (`tokens.css`), and the same fork happens
   for warn and critical. So every `color:` in this bundle that named a verdict now names the
   `-text` step and every `border-color:` still names the `--cf-viz-*` one. Turning `auto` on
   without that change would have shipped a light page whose three most important words were the
@@ -87,11 +87,11 @@
       THERE IS DELIBERATELY NO `<meta name="cf-analytics">` HERE, AND ITS ABSENCE IS THE DECISION.
 
       Every public surface in the estate carries one: an identity naming a GA4 property, read by
-      `analyticsId()` (`ui/packages/ui/src/consent.ts:161-169`) and used by nothing until a reader
+      `analyticsId()` (`ui/packages/ui/src/consent.ts`) and used by nothing until a reader
       presses Accept. This surface does not get one, and the reason is the same one that put
       `noindex, nofollow` below.
 
-      `beacon` is `adminOnly: true` in the registry (`ui/packages/ui/src/surfaces.ts:448`), and the
+      `beacon` is `adminOnly: true` in the registry (`ui/packages/ui/src/surfaces.ts`), and the
       robots directive exists so that a search index cannot CONFIRM the console is here — a
       "no information is available for this page" result is still a result, which is why the
       directive is `nofollow` as well. Sending GA4 hits from these pages would tell Google the same
@@ -121,7 +121,7 @@
 
     <!--
       The three favicons from `brand/assets/beacon/`. There is NO og card and no `og:` meta block
-      here, and the absence is read off the brand plan rather than forgotten: `brand/plan.ts:43` —
+      here, and the absence is read off the brand plan rather than forgotten: `brand/plan.ts` —
       "No OG card and no social banner for Admin, Lantern or Beacon." Those surfaces exist to be
       opened by an operator, not shared. `brand/assets/beacon/` holds no og image, and inventing a
       meta tag pointing at a file that does not exist is how a surface ships a broken preview.
@@ -137,8 +137,8 @@
 
       THIS STRING IS NOW DERIVED AS WELL AS WRITTEN, AND THE TWO HAVE TO AGREE. `DocumentMeta` in
       src/components/shell.tsx applies `surfaceMeta('beacon', …)` on every navigation, and
-      `robotsDirective()` (`ui/packages/ui/src/seo.ts:139-142`) reads `servesUi` and `adminOnly`
-      and nothing else. `beacon` carries `adminOnly: true` (`ui/packages/ui/src/surfaces.ts:448`),
+      `robotsDirective()` (`ui/packages/ui/src/seo.ts`) reads `servesUi` and `adminOnly`
+      and nothing else. `beacon` carries `adminOnly: true` (`ui/packages/ui/src/surfaces.ts`),
       so the runtime value is `noindex, nofollow` — the same seven characters plus nine, produced
       from the registry rather than from this line.
 
@@ -159,9 +159,9 @@
       REVERSED, AND THE REVERSAL IS THE POINT. This read `Beacon — release gate` until now, and
       `DocumentMeta` composes `Release gate — Beacon` from the registry: `surfaceMeta` is
       `${page} — ${surface name}` for every page of every surface in the estate
-      (`ui/packages/ui/src/seo.ts:158-162`), and the page name comes off `ROUTES` — the same table
+      (`ui/packages/ui/src/seo.ts`), and the page name comes off `ROUTES` — the same table
       the sub-navigation and nginx's enumerated locations come from, where the index route is
-      labelled `Release gate` (`src/lib/routes.ts:48`).
+      labelled `Release gate` (`src/lib/routes.ts`).
 
       Two titles for one page in two different word orders is exactly the drift `@cloudsforge/ui/seo`
       was written to end, and it is the drift that is hardest to notice: the shell's title is what a

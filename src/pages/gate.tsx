@@ -11,17 +11,17 @@
  * FOUR RULES THIS PAGE HOLDS, EACH OF WHICH THE ESTATE HAS BROKEN ELSEWHERE.
  *
  * 1. **It only ever GETs.** `GET /v1/gate` does not record; `POST /v1/gate` is the recording form
- *    used at the moment of a real promotion (`beacon/src/server.ts:16-18`, `:397-415`). A console
+ *    used at the moment of a real promotion (`beacon/src/server.ts`). A console
  *    that recorded on every keystroke would fill `gate_decisions` with evaluations nobody made,
  *    and the history panel below — which reads that table — would then be mostly a record of
  *    somebody refreshing this page. `src/lib/beacon.ts` exports no way to reach the POST.
  *
  * 2. **A refusal is rendered as an answer, never as a failure.** The route is 200 for `refuse`
- *    (`beacon/src/server.ts:388-392`). `Asked` in `src/lib/verdict.ts` makes "answered" and
+ *    (`beacon/src/server.ts`). `Asked` in `src/lib/verdict.ts` makes "answered" and
  *    "unreachable" two different shapes so a screen cannot put one where the other belongs.
  *
  * 3. **Known and unknown blockers are two panels, not one list.** They both refuse; only one may
- *    ever be waived (`beacon/src/gate.ts:68-74`). Sorting them together would put the estate's
+ *    ever be waived (`beacon/src/gate.ts`). Sorting them together would put the estate's
  *    most important distinction behind a badge colour.
  *
  * 4. **The verdict is never drawn in `var(--cf-accent)`.** This surface's accent is signal green,
@@ -110,7 +110,7 @@ export function GatePage() {
         <p className="bw-ask__help" id="bw-release-help">
           Up to 128 characters of letters, digits, dot, underscore or hyphen, starting with a letter
           or a digit. Beacon validates the same shape at{' '}
-          <code className="cf-num bw-code">beacon/src/server.ts:913-919</code> and answers 400 for
+          <code className="cf-num bw-code">beacon/src/server.ts</code> and answers 400 for
           anything else.
         </p>
       </form>
@@ -206,7 +206,7 @@ function GateResult({ release }: { release: string }) {
               and collapsing them is this estate's signature defect. Beacon itself models the
               distinction — a failure to gather inputs becomes a `beacon_unavailable` reason with
               `determinacy: 'unknown'` and comes back as a 200 verdict
-              (`beacon/src/gate.ts:376-411`) — so this bundle must not flatten what the service
+              (`beacon/src/gate.ts`) — so this bundle must not flatten what the service
               took care to keep apart. What THIS panel covers is the layer further out: the
               request never reached Beacon, so no verdict exists anywhere, not even a refusing
               one.
@@ -379,7 +379,7 @@ function GateVerdict({
             Somebody with break-glass accepted these, and their name and written reason are on the
             record. An override expires within twelve hours and cannot be made permanent
             (<code className="cf-num bw-code">MAX_OVERRIDE_TTL_MS</code>,{' '}
-            <code className="cf-num bw-code">beacon/src/gate.ts:479</code>). This console shows
+            <code className="cf-num bw-code">beacon/src/gate.ts</code>). This console shows
             overrides and does not create them — see the header of{' '}
             <code className="cf-num bw-code">src/lib/beacon.ts</code> for why.
           </p>

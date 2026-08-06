@@ -17,9 +17,9 @@
  *   → HTTP/1.1 404 Not Found
  *
  * `beacon/src/server.ts` sets four response headers and none of them is `access-control-*`
- * (`send()`, `beacon/src/server.ts:999-1009`), and it registers no OPTIONS route, so a preflight
- * takes the router's 404 (`:297`). The estate's CORS is a single gateway middleware,
- * `cf-cors` at `deploy/gateway/dynamic/policy.yml:42`, whose allowlist names production origins
+ * (`send()`, `beacon/src/server.ts`), and it registers no OPTIONS route, so a preflight
+ * takes the router's 404. The estate's CORS is a single gateway middleware,
+ * `cf-cors` at `deploy/gateway/dynamic/policy.yml`, whose allowlist names production origins
  * only — there is no `localhost` entry in it and no `beacon.<apex>` router that would need one.
  *
  * Every read this bundle makes carries an `Authorization` bearer, which is not a CORS-safelisted
@@ -54,7 +54,7 @@ import { cloudsforgeHosts, type CloudsForgeHosts, type SurfaceKey } from '@cloud
 /**
  * The surface this application IS.
  *
- * `markId` is null for it (`ui/packages/ui/src/surfaces.ts:421`), so no mark is rendered anywhere
+ * `markId` is null for it (`ui/packages/ui/src/surfaces.ts`), so no mark is rendered anywhere
  * in this bundle — see the note in `src/components/shell.tsx`.
  */
 export const PRODUCT: SurfaceKey = 'beacon'

@@ -29,12 +29,12 @@
  * On the DARK scheme two of the three pairs are the same value, which is exactly why this was easy
  * to get wrong and stayed wrong: good and warn clear 4.5:1 unaided, so nothing looked amiss. The
  * third does not — `--cf-critical` measures 3.38:1 on the tightest ground this system composes
- * text on (`ui/packages/ui/src/tokens.css:330-339`), so the word "stop", on the surface whose
+ * text on (`ui/packages/ui/src/tokens.css`), so the word "stop", on the surface whose
  * whole job is to say it, has been under the AA floor for as long as it has shipped.
  *
  * On the LIGHT scheme, which `data-cf-scheme="auto"` in index.html has just made reachable, all
- * three fork: `tokens.css:1164-1165` re-tunes `--cf-viz-good` and `--cf-viz-warn` for marks while
- * `tokens.css:1126-1133` gives the text steps their own, darker values. So a rule that used the
+ * three fork: `tokens.css` re-tunes `--cf-viz-good` and `--cf-viz-warn` for marks while
+ * `tokens.css` gives the text steps their own, darker values. So a rule that used the
  * mark token as type would have been below the floor for every verdict rather than one.
  *
  * The split runs through this file as: `color:` is a `-text` token, `border-color:`,
@@ -45,10 +45,10 @@
  * ── AND `--cf-accent` APPEARS NOWHERE IN A VERDICT RULE, WHICH IS THE POINT ────────────────────
  *
  * This surface's accent IS `--cf-viz-good`'s value: signal green, deliberately the chart `good`
- * step (`ui/packages/ui/src/tokens.css:943-955`). So a verdict drawn in `var(--cf-accent)` would
+ * step (`ui/packages/ui/src/tokens.css`). So a verdict drawn in `var(--cf-accent)` would
  * be green whatever the verdict said, and the headline verdict on this app's landing page is
  * usually `refuse`. The registry states the constraint in the entry itself
- * (`ui/packages/ui/src/surfaces.ts:416-418`): "Beacon's own pages still reserve green/amber/red
+ * (`ui/packages/ui/src/surfaces.ts`): "Beacon's own pages still reserve green/amber/red
  * for probe verdicts."
  *
  * `test/verdict.test.ts` reads this file and fails if `--cf-accent` appears inside any rule whose
@@ -109,7 +109,7 @@ body {
 
 /*
  * `.bw-skip` USED TO BE DECLARED HERE. It is gone with the anchor it styled: the shell now renders
- * `<SkipLink>` from @cloudsforge/ui, which brings `.cf-skip` from `ui.css:851-877` and is the
+ * `<SkipLink>` from @cloudsforge/ui, which brings `.cf-skip` from `ui.css` and is the
  * half of the pattern that was never wrong. What WAS wrong was the target — a `<main id="main">`
  * with no `tabIndex={-1}`, so following the link scrolled the page and left focus behind — and
  * that is fixed by `MainRegion`, not by a stylesheet. See the note in src/components/shell.tsx.
@@ -754,13 +754,13 @@ body {
   /* Chrome, not a verdict. This is the surface identifying itself — the accent is correct here in
      a way it never is on a badge.
 
-     `--cf-accent-text` and not `--cf-accent`, for the reason recorded at `tokens.css:655-664`: the
+     `--cf-accent-text` and not `--cf-accent`, for the reason recorded at `tokens.css`: the
      accents are validated at 3:1 against the raised panel, which is the floor for a border or a
      fill, and `grep -n 'cf-accent' ui.css` finds no `color:` at all in the design system itself.
      Consumers reached for it as type because there was nothing else to reach for, and that is what
      the `-text` step exists to end. Beacon's is the one accent where the two happen to be the same
-     value on the dark scheme (`tokens.css:951` — it already clears at 5.41:1); on the LIGHT scheme
-     they are not (`tokens.css:953`), so naming the right one is what makes `data-cf-scheme="auto"`
+     value on the dark scheme (`tokens.css` — it already clears at 5.41:1); on the LIGHT scheme
+     they are not (`tokens.css`), so naming the right one is what makes `data-cf-scheme="auto"`
      safe here rather than merely quiet. */
   color: var(--cf-accent-text);
 }

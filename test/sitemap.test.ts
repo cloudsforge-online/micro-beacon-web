@@ -4,8 +4,8 @@
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * THE ANSWER IS DERIVED FROM THE REGISTRY, AND THIS FILE'S JOB IS TO PROVE IT STILL IS.
  *
- * `robotsDirective()` (`ui/packages/ui/src/seo.ts:139-142`) reads `servesUi` and `adminOnly` and
- * nothing else. `beacon` carries `adminOnly: true` (`ui/packages/ui/src/surfaces.ts:448`), so the
+ * `robotsDirective()` (`ui/packages/ui/src/seo.ts`) reads `servesUi` and `adminOnly` and
+ * nothing else. `beacon` carries `adminOnly: true` (`ui/packages/ui/src/surfaces.ts`), so the
  * answer is `noindex, nofollow`, and it is stated in three layers with three different readers:
  *
  *   1. `nginx.conf`  — `/robots.txt`, which a crawler fetches BEFORE any page,
@@ -26,7 +26,7 @@
  * address, for the same reason it refuses crawlers: a sitemap is a LIST OF ADDRESSES, and the
  * addresses are the thing an `adminOnly` console is withholding. It is absent from the estate
  * sitemap too, and that is not this repository's doing — `SITEMAP_SURFACES`
- * (`ui/packages/ui/src/sitemap.ts:47-49`) filters `adminOnly` rows out, so `site` already omits
+ * (`ui/packages/ui/src/sitemap.ts`) filters `adminOnly` rows out, so `site` already omits
  * it. Asserted below, because the day that filter changes this file's whole position is wrong.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  */
@@ -258,7 +258,7 @@ describe('the $cf_env map, which this surface declares and deliberately never re
 
   it('recognises exactly the labels the registry reserves', () => {
     /*
-     * `ENV_LABELS` (`ui/packages/ui/src/surfaces.ts:1065-1071`) is the estate's single list —
+     * `ENV_LABELS` (`ui/packages/ui/src/surfaces.ts`) is the estate's single list —
      * `deploy/scripts/check-apex-prefix.py` reads the same export. This surface's answer does not
      * branch on the result, and the map is kept anyway so that a label added to the registry goes
      * red HERE as well as in the sixteen repositories that do branch on it. A surface that dropped
@@ -282,7 +282,7 @@ describe('the $cf_env map, which this surface declares and deliberately never re
 describe('no analytics tag is loaded from the shell', () => {
   it('index.html carries no measurement ID, and the absence is argued rather than accidental', () => {
     /*
-     * `analyticsId()` (`ui/packages/ui/src/consent.ts:161-169`) reads `<meta name="cf-analytics">`
+     * `analyticsId()` (`ui/packages/ui/src/consent.ts`) reads `<meta name="cf-analytics">`
      * and returns null without one, which is what makes `<CookieBanner />` render nothing and
      * `initAnalytics()` a no-op here. The reason is the same one that produced `noindex, nofollow`
      * above: GA4 reports `page_location`, so a hit from an operator console ships the estate's own
