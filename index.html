@@ -105,11 +105,18 @@
       which would need this comment to be argued with first — the gate is already in front of it,
       rather than being remembered afterwards.
 
-      AND THERE IS NO gtag SNIPPET, here or anywhere. `<script src="googletagmanager.com/…">`
-      fetches a third-party script and sets `_ga` on load, before any banner has been drawn let
-      alone answered, and under ePrivacy Art. 5(3) a cookie set before consent is a violation a
-      banner underneath it does not cure. `@cloudsforge/ui/consent` injects the tag from exactly one
-      place: the Accept button. test/sitemap.test.ts greps this file and src/ for the string.
+      AND THERE IS NO MEASUREMENT SNIPPET, here or anywhere. A `<script src>` pointing at Google's
+      tag-manager host fetches a third-party script and sets `_ga` on load, before any banner has
+      been drawn let alone answered, and under ePrivacy Art. 5(3) a cookie set before consent is a
+      violation a banner underneath it does not cure. `@cloudsforge/ui/consent` injects the tag from
+      exactly one place: the Accept button. test/sitemap.test.ts greps this file and src/ for the
+      string.
+
+      THE HOSTNAME IS NOT WRITTEN OUT ANYWHERE IN THIS REPOSITORY, INCLUDING HERE. web-ci.yml's
+      `No third-party analytics tag` step greps the raw tree, comments included, and it is right to:
+      a guard that skipped comments would skip the one line of a minified bundle that matters. So
+      the rule is that the forbidden string never appears — not in prose explaining its absence, and
+      not in the tests that prove it. Those assemble it from fragments at runtime.
     -->
 
     <!--

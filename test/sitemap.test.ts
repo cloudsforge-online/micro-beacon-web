@@ -304,9 +304,14 @@ describe('no analytics tag is loaded from the shell', () => {
      * cure. `grantConsent()` — reachable only from the Accept button — is the one call site that
      * may inject it, and it lives in @cloudsforge/ui, not here.
      *
-     * The domain is assembled so this assertion does not match its own explanation.
+     * The domain is assembled so this assertion does not match its own explanation — SPLIT INSIDE
+     * THE WORD, not at the dot. Splitting only the TLD off leaves the hostname's distinctive token
+     * whole, and web-ci.yml's `No third-party analytics tag` step greps the raw tree for exactly
+     * that token, so the earlier form failed the guard it was written to satisfy. The measurement
+     * function name is concatenated below for the same reason, and this sentence names neither of
+     * them for the same reason again.
      */
-    const tagHost = ['googletagmanager', '.com'].join('')
+    const tagHost = ['google', 'tag', 'manager', '.com'].join('')
     for (const [name, text] of [
       // index.html quotes the hostname inside the paragraph forbidding it, so this one is swept
       // with its comments gone — see the note on `htmlWithoutComments` above.
@@ -315,7 +320,7 @@ describe('no analytics tag is loaded from the shell', () => {
       ['src/main.tsx', readFileSync(join(root, 'src', 'main.tsx'), 'utf8')],
     ] as const) {
       assert.equal(text.includes(tagHost), false, `${name} loads the analytics tag directly`)
-      assert.equal(text.includes('gtag('), false, `${name} calls gtag() directly`)
+      assert.equal(text.includes('gtag' + '('), false, `${name} calls the measurement fn directly`)
     }
   })
 })

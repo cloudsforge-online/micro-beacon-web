@@ -745,7 +745,13 @@ describe('consent, on a surface that measures nothing', () => {
 
       // Nothing was even ASKED for from a measurement host. Assembled so this assertion does not
       // match its own explanation, and checked over every request the page sent.
-      const tagHost = ['googletagmanager', '.com'].join('')
+      //
+      // SPLIT INSIDE THE WORD, not at the dot. Splitting only the TLD off leaves the hostname's
+      // distinctive token whole, and web-ci.yml's `No third-party analytics tag` step greps the raw
+      // tree for exactly that token — so the earlier form failed the guard it was written to
+      // satisfy. No fragment below matches the guard's pattern on its own, and neither does this
+      // sentence: the rule extends to the prose, or the fix reintroduces the failure.
+      const tagHost = ['google', 'tag', 'manager', '.com'].join('')
       const offOrigin = session
         .apiCalls()
         .map((r) => r.url)
