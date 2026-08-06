@@ -38,10 +38,11 @@
  *                    problems". A reader skimming a panel reads the adjective, not the paragraph.
  *
  * `citations` is excluded from the prose sweeps, deliberately and with the exclusion stated here
- * rather than buried: it holds `file.ts` line references, which contain digits that are
- * not figures about a budget. Excluding it is a hole, so it is narrowed — the sweep still requires
- * every citation to LOOK like a citation (`path:line`), so prose cannot be smuggled into the field
- * to escape the check.
+ * rather than buried: it holds paths into micro-beacon, and a path carries digits that are not
+ * figures about a budget. Excluding it is a hole, so it is narrowed — the sweep still requires
+ * every citation to LOOK like one: a path, an em dash, and the claim read there. It used to
+ * require a LINE as well, and that requirement is gone, because a line names a position in a file
+ * micro-beacon owns and is free to edit. See the assertion itself for what replaced it.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  */
 import assert from 'node:assert/strict'
