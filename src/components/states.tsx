@@ -92,16 +92,21 @@ export function Failed({
       <span className="bw-state__icon" aria-hidden="true">
         ⊘
       </span>
-      <p className="bw-state__title">{which} could not be read</p>
+      <p className="bw-state__title">{which} did not arrive</p>
       <p className="bw-state__hint">{notice.message}</p>
+      <p className="bw-state__hint">
+        Nothing was altered and nothing was lost — this panel only ever asks for figures. What is
+        missing is the answer itself, so read the space below as blank rather than as calm, and ask
+        again.
+      </p>
       <p className="bw-state__meta">
         {notice.code ? (
           <>
-            Beacon answered <code className="cf-num bw-code">{notice.code}</code>
+            Beacon said <code className="cf-num bw-code">{notice.code}</code>
           </>
         ) : (
           <>
-            No error code was returned
+            Beacon named no error code
             {notice.status !== undefined && (
               <>
                 {' '}
@@ -112,20 +117,20 @@ export function Failed({
         )}
         {notice.requestId ? (
           <>
-            {' · request '}
+            {' · quote request '}
             <code className="cf-num bw-reqid">{notice.requestId}</code>
           </>
         ) : (
           // Said out loud rather than left blank. Beacon sets the header on every response, so an
           // absent id means the response did not come from Beacon at all — a gateway, a proxy, or
           // this bundle's own nginx answering a path it does not serve.
-          <> · no request id, so this answer did not come from Beacon</>
+          <> · no request id, which means something other than Beacon sent this</>
         )}
       </p>
       {onRetry && (
         <div className="bw-state__action">
           <button type="button" className="cf-btn" onClick={onRetry}>
-            Try again
+            Ask again
           </button>
         </div>
       )}

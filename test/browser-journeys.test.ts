@@ -261,7 +261,7 @@ describe('the operator console renders', () => {
       // No VERDICT word. Not a ban on the stem "refuse" — the panel legitimately says that if
       // Beacon refuses your account the page will show Beacon's own code, which is the sentence
       // that stops this screen being read as a guess.
-      for (const verdict of ['Refused', 'May be promoted', 'nobody knows']) {
+      for (const verdict of ['Refused', 'Clear to promote', 'something was never measured']) {
         assert.ok(!text.includes(verdict), `the signed-out screen implies a verdict: ${verdict}`)
       }
     } finally {
@@ -280,9 +280,9 @@ describe('the operator console renders', () => {
     try {
       await assertMounted(session, {
         showing: [
-          'Refused — nobody knows',
-          'We could not find out — which is worse',
-          'We looked, and it is bad',
+          'Refused — something was never measured',
+          'Never measured — and that is the worse of the two',
+          'Measured, and it came out bad',
           'conformance_never_run',
         ],
       })
@@ -317,12 +317,12 @@ describe('the operator console renders', () => {
     })
     try {
       const text = await assertMounted(session, {
-        showing: ['NOT CHECKING ERROR BUDGETS AT ALL', 'no error-budget signal'],
+        showing: ['WEIGHING NO ERROR BUDGET AT ALL', 'no error-budget signal'],
       })
       // The whole reason the requirement exists: the gate's silence about budgets is
       // indistinguishable from a clean pass, so the caveat has to live beside the verdict and not
       // only on the page nobody opens.
-      assert.ok(text.indexOf('NOT CHECKING ERROR BUDGETS') < text.indexOf('Recorded decisions'))
+      assert.ok(text.indexOf('WEIGHING NO ERROR BUDGET') < text.indexOf('Decisions already on the record'))
     } finally {
       await session.close()
     }
@@ -337,7 +337,7 @@ describe('the operator console renders', () => {
       apiPrefixes: SERVICE_PREFIXES,
     })
     try {
-      const text = await assertMounted(session, { showing: ['No objectives defined'] })
+      const text = await assertMounted(session, { showing: ['No objective is set'] })
       // Read off the rendered DOM rather than off the model, because this is the layer where a
       // component could have added a figure the pure function never produced.
       const panel = await session.page.evaluate(
@@ -363,13 +363,13 @@ describe('the operator console renders', () => {
     })
     try {
       const text = await assertMounted(session, {
-        showing: ['The gate was never asked', 'This is not a refusal'],
+        showing: ['No answer came back', 'This is not a refusal'],
         // Chromium logs a refused connection to the console, and this scenario arranged all four.
         tolerate: [/Failed to load resource/],
         tolerateFailures: [/\/v1\//, /\/auth\/me/],
       })
       // The two facts must not be readable as each other, in either direction.
-      assert.doesNotMatch(text, /Refused — nobody knows/)
+      assert.doesNotMatch(text, /Refused — something was never measured/)
       assert.match(text, /Do not read this screen as a block and do not read it as a pass/)
     } finally {
       await session.close()

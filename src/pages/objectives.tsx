@@ -10,7 +10,7 @@
  * important test in this repository — asserts against it directly.
  *
  * What that test forbids is the false-green: given `{slos: [], budgets: []}` the model must say
- * "no objectives defined", must carry no figure at all, must not wear the `clear` tone, and must
+ * "no objective is set", must carry no figure at all, must not wear the `clear` tone, and must
  * not contain a word from the healthy vocabulary. Make this panel render a hundred per cent, or a
  * nought, or a green tick, and the suite goes red.
  */
@@ -27,7 +27,7 @@ export function ObjectivesPage() {
     // answer for something it knows about, which `describeBudgets` reports as `withoutBudget`
     // rather than as an absence of objectives.
     (data) => data.slos.length,
-    'Beacon’s objectives could not be read.',
+    'Beacon did not send back its objectives.',
     [],
   )
 
@@ -36,13 +36,22 @@ export function ObjectivesPage() {
       <header className="bw-page__head">
         <h1 className="bw-page__title">Error budgets</h1>
         <p className="bw-page__lead">
-          An objective, the allowance it buys, and how much of that allowance is left. These are the
-          numbers the release gate is supposed to gate on.
+          Four words do all the work here, so take them in one breath. An <strong>objective</strong>{' '}
+          fixes a <strong>target</strong> — the share of events that have to succeed, 99% of
+          scheduled runs, say — across a <strong>window</strong>, a rolling stretch of days that
+          the count is taken over. The slack the target leaves is the{' '}
+          <strong>error budget</strong>: how many events are allowed to go wrong before the target
+          is missed. Spending it is called <strong>burn</strong>.
+        </p>
+        <p className="bw-page__lead">
+          A budget with room left is a service allowed to take risks. A budget spent to nothing is a
+          change freeze on that service, and the gate is what enforces it — not a paragraph in a
+          runbook. These are the figures a release is supposed to be weighed against.
         </p>
       </header>
 
-      <Panel title="Registered objectives" reads="GET /v1/slos">
-        {objectives.state === 'loading' && <Loading label="Reading the registered objectives" />}
+      <Panel title="Every objective and its budget" reads="GET /v1/slos">
+        {objectives.state === 'loading' && <Loading label="Asking Beacon which objectives are set" />}
 
         {objectives.state === 'failed' && objectives.error && (
           <>
@@ -53,8 +62,9 @@ export function ObjectivesPage() {
               exact error it exists to report.
             */}
             <Note tone="warn">
-              This page could not read the objectives, so it cannot tell you whether any exist.
-              That is not the same as there being none.
+              The request for the objectives did not come back, so this page cannot say whether any
+              are registered. Do not read the panel below as an empty table — an unanswered question
+              and an answer of “none” are different facts, and only one of them is on screen.
             </Note>
             <Failed
               which="The registered objectives"
@@ -83,7 +93,7 @@ function Budgets({ data }: { data: Parameters<typeof describeBudgets>[0] }) {
         </Note>
         <p className="bw-noobjectives__why">{panel.whyNotZero}</p>
         <details className="bw-noobjectives__cites">
-          <summary>Where each of those claims was read</summary>
+          <summary>Check any of that against the source</summary>
           <ul>
             {panel.citations.map((citation) => (
               <li key={citation}>
@@ -110,21 +120,22 @@ function Budgets({ data }: { data: Parameters<typeof describeBudgets>[0] }) {
               // nought, and printing "0 of 0 spent" here would be a figure standing where the
               // service explicitly declined to make a claim.
               <p className="bw-budget__none">
-                Nothing was observed in this window, so there is no consumption to report. The gate
-                treats this as an unknown and refuses on it.
+                Not one event landed in this window, so there is no burn to report and no figure
+                that would not be invented. An empty window is an unknown, and the gate refuses on
+                it rather than reading it as a target comfortably met.
               </p>
             ) : (
               <dl className="bw-budget__figures">
                 <div>
-                  <dt>Bad events</dt>
+                  <dt>Burnt</dt>
                   <dd className="cf-num">{row.bad}</dd>
                 </div>
                 <div>
-                  <dt>Allowance</dt>
+                  <dt>Budget</dt>
                   <dd className="cf-num">{row.allowedBad}</dd>
                 </div>
                 <div>
-                  <dt>Remaining</dt>
+                  <dt>Left</dt>
                   <dd className="cf-num">{row.remaining}</dd>
                 </div>
               </dl>
@@ -136,8 +147,9 @@ function Budgets({ data }: { data: Parameters<typeof describeBudgets>[0] }) {
       {panel.withoutBudget.length > 0 && (
         <>
           <Note tone="warn">
-            These objectives are registered and Beacon returned no budget for them. That is a gap in
-            the answer rather than a budget that is intact.
+            Beacon knows about these objectives and sent back no budget for any of them. Something
+            it can describe, it could not count. Read the omission as a hole in the answer, never as
+            an allowance sitting untouched.
           </Note>
           <ul className="bw-budgets bw-budgets--gap">
             {panel.withoutBudget.map((slo) => (
@@ -151,10 +163,11 @@ function Budgets({ data }: { data: Parameters<typeof describeBudgets>[0] }) {
 
       {panel.rows.length === 0 && (
         <Empty
-          title="Objectives are registered, and no budget was returned for any of them"
+          title="Objectives are registered, and not one came back with a budget"
           meaning={
-            'Beacon answered with objectives and an empty budget list. That is the service ' +
-            'failing to compute something it knows about, not a set of intact allowances.'
+            'The objectives arrived; the budget list beside them was empty. Beacon failed to ' +
+            'work out something it holds the definitions for, so no target on this page is being ' +
+            'tracked. None of this is evidence that an allowance is still whole.'
           }
         />
       )}

@@ -28,24 +28,39 @@ import type { Voice } from '../lib/verdict.ts'
 export function journeyVoice(status: JourneyStatus | null): Voice {
   switch (status) {
     case 'pass':
-      return { word: 'Passed', glyph: '●', tone: 'clear', meaning: 'The most recent run passed.' }
+      return {
+        word: 'Passed',
+        glyph: '●',
+        tone: 'clear',
+        meaning: 'Every step of the last scheduled run did what it was supposed to do.',
+      }
     case 'skip':
       return {
         word: 'Skipped',
         glyph: '▲',
         tone: 'caution',
         meaning:
-          'The most recent run was a skip. A skip is never green: it counts against the journey ' +
-          'exactly as a failure would.',
+          'The last run stood down before it proved anything — usually a missing address or ' +
+          'credential. It scores against this journey exactly as a failure does, because a ' +
+          'scenario that quietly does nothing is the easiest kind to fake.',
       }
     case 'fail':
-      return { word: 'Failed', glyph: '■', tone: 'stop', meaning: 'The most recent run failed.' }
+      return {
+        word: 'Failed',
+        glyph: '■',
+        tone: 'stop',
+        meaning:
+          'A step asserted something about the product and the product disagreed. Treat this as ' +
+          'user-visible until you have shown otherwise.',
+      }
     case 'error':
       return {
         word: 'Errored',
         glyph: '■',
         tone: 'stop',
-        meaning: 'The most recent run did not complete.',
+        meaning:
+          'The run threw something other than a failed assertion, so it never reached a verdict. ' +
+          'That usually points at Beacon or the harness rather than at the product.',
       }
     case null:
       return {
@@ -53,8 +68,8 @@ export function journeyVoice(status: JourneyStatus | null): Voice {
         glyph: '?',
         tone: 'unknown',
         meaning:
-          'No scheduled run has ever been recorded. Nothing has been measured, and for a critical ' +
-          'journey that refuses the gate.',
+          'Not one scheduled run is on record. Nobody has measured this path, and where the ' +
+          'journey is critical the gate refuses on that alone.',
       }
   }
 }
@@ -69,7 +84,7 @@ export function JourneysPage() {
   const journeys = useResource(
     (signal) => listJourneys(signal),
     (data) => data.journeys.length,
-    'The journey list could not be read.',
+    'Beacon did not send back the journey list.',
     [filter],
   )
 
@@ -83,8 +98,25 @@ export function JourneysPage() {
       <header className="bw-page__head">
         <h1 className="bw-page__title">Journeys</h1>
         <p className="bw-page__lead">
-          What Beacon actually drives against the estate. A critical journey that is failing,
-          skipping, stale or has never run refuses the release gate.
+          A journey walks a whole path through the live estate, one named step at a time — sign in,
+          hand off to another product, move money, read it back. Where a probe asks whether one
+          address answers, a journey asks whether the product works. That is why a wall of green
+          probes can sit beside a broken journey: every service replied, and the path through them
+          still came apart.
+        </p>
+        <p className="bw-page__lead">
+          Beacon drives each one on a schedule — every five minutes unless this estate says
+          otherwise — and cuts a run off when it overruns its deadline. Only scheduled runs count. A
+          run somebody kicked off by hand is left out on purpose, so that investigating an outage
+          cannot turn the board green.
+        </p>
+        <p className="bw-page__lead">
+          A critical journey holds the release gate shut when its last run failed, skipped or
+          errored, when it has yet to string together three green runs, or when it has never run at
+          all. It also holds the gate shut when that last run is older than the freshness horizon —
+          the age past which Beacon stops treating a result as current, because a journey that
+          stopped running keeps reporting whatever it said last. Any muted journey holds the gate
+          shut too, critical or not.
         </p>
       </header>
 
@@ -105,16 +137,18 @@ export function JourneysPage() {
       {muted.length > 0 && (
         <Note tone="warn">
           <strong>
-            {muted.length} journey(s) are muted, and the gate requires that count to be zero.
+            {muted.length} journey(s) are muted, and the gate will not promote anything until that
+            count reaches zero.
           </strong>{' '}
-          A muted journey is not a passing journey; it is an unmeasured one, and it is a{' '}
-          <em>known</em> blocker rather than an unknown because somebody chose it and left their
-          name on it (<code className="cf-num bw-code">beacon/src/gate.ts</code>).
+          Muting hides the alarm, never the measurement — the journey keeps running and keeps
+          scoring. So a muted row is not a healthy row; it is one nobody is acting on. The gate
+          files it as a <em>known</em> blocker rather than an unknown, because a person chose it and
+          their name is on the row below.
         </Note>
       )}
 
-      <Panel title="Registered journeys" reads="GET /v1/journeys">
-        {journeys.state === 'loading' && <Loading label="Reading the journey list" />}
+      <Panel title="Every registered journey" reads="GET /v1/journeys">
+        {journeys.state === 'loading' && <Loading label="Asking Beacon which journeys are registered" />}
         {journeys.state === 'failed' && journeys.error && (
           <Failed which="The journey list" notice={journeys.error} onRetry={journeys.reload} />
         )}
@@ -122,15 +156,20 @@ export function JourneysPage() {
           <Empty
             title="No journeys are registered"
             meaning={
-              'Beacon is running and has nothing to drive. That is a finding about coverage, not ' +
-              'a quiet week: a gate with no journeys behind it cannot refuse on one.'
+              'Beacon is up and has been given nothing to drive. No user path in this estate is ' +
+              'being exercised, so nobody can say whether the products work — and a gate with no ' +
+              'journeys behind it has nothing to refuse on. Journeys are declared in Beacon’s own ' +
+              'code and appear here once a deploy syncs them.'
             }
           />
         )}
         {journeys.state === 'ok' && rows.length === 0 && (
           <Empty
             title="No journeys match this filter"
-            meaning="The list was read successfully; this filter simply excludes every row in it."
+            meaning={
+              'Beacon sent a full list and this filter excludes every row in it. Switch back to ' +
+              'All to see them. Nothing is missing and nothing failed.'
+            }
           />
         )}
         {journeys.state === 'ok' && rows.length > 0 && (
@@ -152,12 +191,18 @@ function JourneyRow({ journey }: { journey: Journey }) {
         <Badge voice={journeyVoice(journey.lastStatus)} />
         <code className="cf-num bw-code">{journey.name}</code>
         {journey.critical && (
-          <span className="bw-tag bw-tag--critical" title="A gate input. This one can refuse a release.">
+          <span
+            className="bw-tag bw-tag--critical"
+            title="On the critical path. This journey can hold a release on its own."
+          >
             critical
           </span>
         )}
         {journey.muted && (
-          <span className="bw-tag bw-tag--muted" title="Muted journeys must be zero at a gate.">
+          <span
+            className="bw-tag bw-tag--muted"
+            title="Still running, still scoring, nobody acting on it. The gate refuses while any journey is muted."
+          >
             muted
           </span>
         )}
@@ -170,8 +215,8 @@ function JourneyRow({ journey }: { journey: Journey }) {
       </p>
       {journey.muted && (
         <p className="bw-row__muted">
-          Muted by <code className="cf-num bw-code">{journey.mutedBy ?? 'unknown'}</code>:{' '}
-          {journey.mutedReason ?? 'no reason was given'}
+          Silenced by <code className="cf-num bw-code">{journey.mutedBy ?? 'unknown'}</code>, who
+          gave the reason: {journey.mutedReason ?? 'none was recorded'}
         </p>
       )}
     </li>

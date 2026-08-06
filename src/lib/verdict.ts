@@ -137,16 +137,16 @@ export function classify(reasons: readonly GateReason[]): {
  */
 export const WAIVABLE: Readonly<Record<Determinacy, string>> = {
   known:
-    'A person may waive this with break-glass, and their name and a written reason go on the ' +
-    'record when they do.',
+    'Somebody with break-glass can accept one of these and let the release through. Their name ' +
+    'and their written reasoning go on the record, and the waiver runs out within twelve hours.',
   unknown:
-    'This can never be waived. Break-glass refuses an indeterminate reason code outright — find ' +
-    'out what is true, then decide.',
+    'No waiver reaches these. Break-glass turns an indeterminate code away at the point somebody ' +
+    'tries to write it, so the only route past is to go and find out what is true.',
 }
 
 export const DETERMINACY_HEADING: Readonly<Record<Determinacy, string>> = {
-  known: 'We looked, and it is bad',
-  unknown: 'We could not find out — which is worse',
+  known: 'Measured, and it came out bad',
+  unknown: 'Never measured — and that is the worse of the two',
 }
 
 export const DETERMINACY_VOICE: Readonly<Record<Determinacy, Voice>> = {
@@ -154,13 +154,15 @@ export const DETERMINACY_VOICE: Readonly<Record<Determinacy, Voice>> = {
     word: 'Known',
     glyph: '■',
     tone: 'stop',
-    meaning: 'Beacon measured this and the measurement is bad.',
+    meaning: 'Beacon took the measurement and did not like the result.',
   },
   unknown: {
     word: 'Unknown',
     glyph: '?',
     tone: 'unknown',
-    meaning: 'Beacon could not measure this at all. An unknown is not a pass.',
+    meaning:
+      'Beacon never got a measurement here. Silence is not the same as success, so it counts ' +
+      'against the release.',
   },
 }
 
@@ -184,37 +186,40 @@ export function verdictVoice(answer: {
     // could not render as a pass — see `contradictions()` below, which reports that rather than
     // hiding it.
     return {
-      word: 'Refused — nobody knows',
+      word: 'Refused — something was never measured',
       glyph: '?',
       tone: 'unknown',
       meaning:
-        'At least one input could not be measured. The gate is fail-closed: an unknown is not a ' +
-        'pass, and no override can reach one.',
+        'At least one of the four inputs came back with no measurement behind it. The gate shuts ' +
+        'when it cannot see, and nobody can waive their way past a thing nobody has looked at.',
     }
   }
   switch (answer.decision) {
     case 'promote':
       return {
-        word: 'May be promoted',
+        word: 'Clear to promote',
         glyph: '●',
         tone: 'clear',
-        meaning: 'Every input the gate checks was measured and none of them blocks.',
+        meaning: 'Beacon measured all four inputs and not one of them stands in the way.',
       }
     case 'promote_with_override':
       return {
-        word: 'Promoted only under an override',
+        word: 'Cleared only because somebody waived it',
         glyph: '▲',
         tone: 'caution',
         meaning:
-          'Everything that blocked was waived by somebody with break-glass. This is never a ' +
-          'plain promote, so the record cannot read as a clean run.',
+          'Real blockers were found here and a person with break-glass accepted every one of ' +
+          'them. Beacon refuses to file this as a clean run, so the history shows it for what it ' +
+          'is.',
       }
     case 'refuse':
       return {
         word: 'Refused',
         glyph: '■',
         tone: 'stop',
-        meaning: 'Beacon measured every input and at least one of them blocks the release.',
+        meaning:
+          'Beacon measured all four inputs and at least one of them says this build should not ' +
+          'ship.',
       }
   }
 }
@@ -234,21 +239,21 @@ export function contradictions(answer: GateAnswer): readonly string[] {
   const out: string[] = []
   if (answer.indeterminate && answer.promote) {
     out.push(
-      'The answer says the release is indeterminate and also that it may be promoted. An ' +
-        'indeterminate evaluation always refuses; the two cannot both be true.',
+      'It reports something unmeasured and clears the build in the same breath. An evaluation ' +
+        'with an unmeasured input always refuses, so one of those two claims is wrong.',
     )
   }
   if (answer.promote !== (answer.decision !== 'refuse')) {
     out.push(
-      `The answer says decision=${answer.decision} and promote=${String(answer.promote)}. ` +
-        'Beacon derives one from the other, so these cannot disagree.',
+      `It reports decision=${answer.decision} beside promote=${String(answer.promote)}. ` +
+        'Beacon works the second out from the first, so they have no way to disagree.',
     )
   }
   if (answer.decision === 'promote' && answer.waived.length > 0) {
     out.push(
-      'The answer is a plain promote and also carries waived reasons. Beacon never returns a ' +
-        'plain promote when anything was waived, so that a promotion history cannot read as a ' +
-        'clean run.',
+      'It calls this a clean promotion while also listing blockers that were waived. Beacon ' +
+        'keeps those apart on purpose, so that nobody reading the history later mistakes a ' +
+        'waived release for an untroubled one.',
     )
   }
   return out
@@ -303,21 +308,23 @@ export type Asked =
 export function unreachableVoice(notice: ErrorNotice): Voice {
   const identityDown = notice.code === 'verifier_unavailable'
   return {
-    word: 'The gate was never asked',
+    word: 'No answer came back',
     glyph: '⊘',
     tone: 'unknown',
     meaning: identityDown
-      ? 'Beacon answered, but it could not verify the credential because identity is ' +
-        'unavailable. That is a fault in identity, not a verdict about this release.'
-      : 'This page could not get an answer out of Beacon. Nothing here says anything about ' +
-        'whether the release may ship.',
+      ? 'Beacon replied, but it could not check who you are because the identity service is ' +
+        'down. That is a fault in identity and it says nothing at all about this release.'
+      : 'The request to Beacon did not come back, so there is no verdict to show you — not a ' +
+        'refusal, not a pass, nothing about whether this build may ship.',
   }
 }
 
 /** Whether a tag is one Beacon would accept, and the sentence to show when it is not. */
 export function validateRelease(raw: string, pattern: RegExp): { ok: true } | { ok: false; why: string } {
   const value = raw.trim()
-  if (value.length === 0) return { ok: false, why: 'Enter a release tag to ask the gate about it.' }
+  if (value.length === 0) {
+    return { ok: false, why: 'Type the tag of the build you want a verdict on.' }
+  }
   if (pattern.test(value)) return { ok: true }
   // The service's own sentence, from `requireRelease`, `beacon/src/server.ts`. Quoted rather
   // than paraphrased so that the page and the 400 an operator may also see in a terminal agree.
@@ -337,36 +344,50 @@ export function validateRelease(raw: string, pattern: RegExp): { ok: true } | { 
  * matters. Every sentence is the service's reasoning, condensed, with the line it came from.
  */
 export const REASON_MEANING: Readonly<Record<ReasonCode, string>> = {
-  journey_failing: 'The most recent scheduled run of a critical journey did not pass.',
+  journey_failing:
+    'A journey on the critical path came back failed or errored on its last scheduled run. Treat ' +
+    'this as a user-visible problem until somebody shows it is not.',
   journey_skipped:
-    'A skip is never green. It counts exactly as a failure would, because the journeys that ' +
-    'quietly did nothing are the easiest ones to fake (beacon/src/gate.ts).',
+    'The journey stood down instead of proving anything — usually a missing address or ' +
+    'credential. It scores as a failure here, because a scenario that quietly does nothing is ' +
+    'the easiest kind to fake.',
   journey_muted:
-    'A muted journey is not a passing journey; it is an unmeasured one. The muted count must be ' +
-    'zero at a gate (beacon/src/gate.ts).',
+    'Somebody silenced this journey. It is still running and still scoring; what stopped was ' +
+    'anyone acting on it. The gate will not promote while a single journey is muted.',
   journey_recent_failure:
-    'Three consecutive green runs are required, not one. One green run after a red one is a ' +
-    'flake that happened to land the right way up (beacon/src/gate.ts).',
+    'The last run passed, but a red one sits within the recent window the gate reads. It wants ' +
+    'three green runs in a row, because one pass straight after a failure is a flake that landed ' +
+    'the right way up.',
   error_budget_exhausted:
-    'The whole error budget has been spent, which is a change freeze on that service. This is ' +
-    'the gate BEING the freeze rather than a paragraph describing one (beacon/src/gate.ts).',
-  conformance_breaking: 'A suite found breaking differences against the recorded corpus.',
-  incident_open: 'A SEV1 or SEV2 incident is open. SEV3 and SEV4 do not block (beacon/src/gate.ts).',
-  journey_never_run: 'No scheduled run of this journey has ever been recorded. Nobody has measured it.',
+    'This service has spent its whole error budget for the window. That is a change freeze, and ' +
+    'the gate is the thing enforcing it rather than a document asking nicely.',
+  conformance_breaking:
+    'A suite answered differently from the recording in a way that would break code written ' +
+    'against the old shape. Nothing here is about uptime — the service may be perfectly up.',
+  incident_open:
+    'An incident is open at SEV1 or SEV2. Close it, or have it waived, and this clears. SEV3 and ' +
+    'SEV4 never appear here.',
+  journey_never_run:
+    'Not one scheduled run of this journey exists. Nobody has ever measured this path, so its ' +
+    'silence is worth nothing.',
   journey_stale:
     'The last run is older than the freshness horizon. THIS IS THE ONE THAT CATCHES A DEAD ' +
-    'SCHEDULER: a journey that stopped running reports its last status for ever, so a green grid ' +
-    'can mean nothing has run since Tuesday (beacon/src/gate.ts).',
+    'SCHEDULER: a journey that stopped running keeps reporting whatever it said last, so a board ' +
+    'full of green can mean nothing has run since Tuesday.',
   journey_insufficient_history:
-    'Fewer runs have been recorded than the gate requires to believe a pass.',
+    'The journey has not run often enough for the gate to trust a pass. It is not failing; there ' +
+    'is too little history behind it to draw on.',
   error_budget_no_data:
-    'The window holds no observations. Zero observations is not 100% availability: a service ' +
-    'nothing has measured has not demonstrated anything (beacon/src/gate.ts).',
-  conformance_never_run: 'No conformance run has ever been recorded, so nothing has been compared.',
+    'Not one event landed in the window, so there is nothing to divide. An empty window is not ' +
+    'perfect availability — a service nobody has watched has demonstrated nothing.',
+  conformance_never_run:
+    'No suite has ever reported, so nothing has been held against the recording. Whether this ' +
+    'estate still answers the way its callers expect is an open question.',
   conformance_inconclusive:
-    "A suite's most recent run was a skip or an error, so nothing was compared. A suite that " +
-    'could not run is not a suite that passed.',
+    'A suite’s last attempt skipped or errored, so no comparison was made. A suite that could ' +
+    'not run tells you as little as one that never ran.',
   beacon_unavailable:
-    'Beacon could not read its own state, so it could not evaluate anything. It refuses rather ' +
-    'than throwing, because a caller might log an exception and carry on (beacon/src/gate.ts).',
+    'Beacon could not read its own records, so it evaluated nothing. It answers with a refusal ' +
+    'rather than throwing, because an exception is the kind of thing a caller logs and walks ' +
+    'past.',
 }

@@ -4,16 +4,19 @@
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * THE ONE FACT THIS FILE EXISTS TO STOP THE PAGE PAPERING OVER.
  *
- * **Beacon's `slos` table is empty and nothing seeds it.** Verified against the running estate
- * before this file was written:
+ * **Beacon's `slos` table is empty, and the command that would fill it has not been run here.**
+ * `beacon/src/sloseed.ts` holds the owner's objectives and `beacon slo-seed` (`beacon/src/cli.ts`)
+ * registers them through `PUT /v1/slos/:name`. It is a deploy step, not something the service does
+ * for itself, so an estate nobody has run it against still answers:
  *
  *   curl -s -H "x-beacon-token: …" http://127.0.0.1:4143/v1/slos
  *   → {"slos":[],"budgets":[]}
  *
  * An objective is REGISTERED, never derived. `upsertSlo` has exactly one caller in the whole
- * service — the admin-only `PUT /v1/slos/:name` (`beacon/src/server.ts`) — and Beacon ships no
- * catalogue. `deploy/compose/docker-compose.estate.yml` records the consequence found by
- * running it: every `slo_observations` insert fails a foreign key, `jobs.ts` catches and warns,
+ * service — the admin-only `PUT /v1/slos/:name` (`beacon/src/server.ts`) — and the seeder goes
+ * through that same route rather than around it. `deploy/compose/docker-compose.estate.yml`
+ * records the consequence of leaving the table empty: every `slo_observations` insert fails a
+ * foreign key, `jobs.ts` catches and warns,
  * the service stays healthy, and "what is lost is every objective and every error budget — the
  * numbers the gate is supposed to gate ON".
  *
@@ -27,7 +30,7 @@
  * A naive panel renders that as "Error budgets: no problems", in green, and it is the exact
  * false-green this estate keeps shipping. So:
  *
- *   1. This module answers **"No objectives defined"**, never a figure. `figure` is `null` and
+ *   1. This module answers **"No objective is set"**, never a figure. `figure` is `null` and
  *      the model carries no number at all — not a nought, not a percentage, not a remaining count.
  *   2. Its tone is `unknown`, never `clear`. An absence of measurement is the same class of thing
  *      as `error_budget_no_data`, which the gate treats as an unknown and refuses on.
@@ -41,7 +44,7 @@
  *      it, and a browser is the last place it should be decided.
  *
  * `test/objectives.test.ts` is the most important test in this repository. It asserts that
- * `describeBudgets({slos: [], budgets: []})` produces the words "no objectives defined" and
+ * `describeBudgets({slos: [], budgets: []})` produces the words "no objective is set" and
  * produces NO number, NO percentage, NO `clear` tone and no word from the healthy vocabulary. Break
  * that panel and the suite goes red.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
@@ -106,39 +109,43 @@ export function describeBudgets(objectives: Objectives): BudgetPanel {
     return {
       kind: 'no-objectives',
       voice: {
-        word: 'No objectives defined',
+        word: 'No objective is set',
         glyph: '⌀',
         // NEVER `clear`. An unmeasured thing wears the same tone as an unknown gate input,
         // because that is what it is.
         tone: 'unknown',
         meaning:
-          'Nothing has been registered for Beacon to measure availability against, so there is ' +
-          'no error budget to report for anything.',
+          'Nobody has told Beacon what to hold this estate to, so there is no target, no window ' +
+          'and no budget to report against for any service.',
       },
-      headline: 'No objectives defined',
+      headline: 'No objective is set',
       figure: null,
       detail:
-        'Beacon’s objectives table is empty and nothing seeds it. An objective is ' +
-        'REGISTERED, never derived: the only caller that writes one is the admin-only ' +
-        'PUT /v1/slos/:name route, and Beacon ships no catalogue. So no service in this estate ' +
-        'has an error budget, and this panel shows the reason instead of a figure.',
+        'Beacon’s objectives table has nothing in it. A target is registered by hand and never ' +
+        'inferred — PUT /v1/slos/:name is the one route that writes one. Beacon does ship the ' +
+        'command that fills the table: `beacon slo-seed` registers a target per scheduled ' +
+        'journey, taken from the figures its owner set, and it is meant to run on every deploy. ' +
+        'Nobody has run it against this deployment, which is why the reason stands where a ' +
+        'figure would.',
       gateConsequence:
-        'THE RELEASE GATE IS THEREFORE NOT CHECKING ERROR BUDGETS AT ALL. It emits its two budget ' +
-        'reason codes from inside a loop over the registered objectives; with none registered, ' +
-        'that loop body never runs and neither code can ever be produced. The gate’s silence ' +
-        'about budgets is indistinguishable from a clean result and is not one — whatever ' +
-        'verdict it gives, that verdict carries no error-budget signal whatsoever.',
+        'THE RELEASE GATE IS THEREFORE WEIGHING NO ERROR BUDGET AT ALL. Its two budget reason ' +
+        'codes are raised from inside a loop over the registered targets, so with the table ' +
+        'empty that loop body never executes and neither code can reach a verdict. A gate that ' +
+        'never asked reads exactly like a gate that asked and found nothing wrong — so take the ' +
+        'verdict as carrying no error-budget signal, in either direction.',
       whyNotZero:
-        'Shown as an absence rather than a nought, and never as a full remaining allowance. ' +
-        'Beacon’s own words: zero observations is not full availability, and a service ' +
-        'nothing has measured has not demonstrated anything. Inventing an objective here would be ' +
-        'worse than showing none — a threshold nobody agreed to becomes the one the estate ' +
-        'is judged by.',
+        'Reported as an absence, because every figure available here would be a lie: a full ' +
+        'allowance claims a target was honoured, and an empty one claims it was blown. Beacon ' +
+        'holds the rule that decides it — an empty window is not perfect availability, and a ' +
+        'service nobody has watched has demonstrated nothing. Registering a target from this ' +
+        'console would be worse still, because a threshold nobody agreed to becomes the one the ' +
+        'estate gets judged by.',
       citations: [
-        'beacon/src/gate.ts — collectReasons emits error_budget_* only from inside the budget loop',
-        'beacon/src/server.ts — PUT /v1/slos/:name is the only caller of upsertSlo',
-        'beacon/src/gate.ts — zero observations is not full availability',
-        'deploy/compose/docker-compose.estate.yml — every slo_observations insert fails, and why it was not fixed there',
+        'beacon/src/gate.ts — collectReasons raises error_budget_* only inside the loop over registered budgets',
+        'beacon/src/server.ts — PUT /v1/slos/:name is the sole caller of upsertSlo',
+        'beacon/src/sloseed.ts — OBJECTIVES holds the owner’s figures, and seed() registers them through that route',
+        'beacon/src/cli.ts — slo-seed is the command that runs the seeder, and it is not automatic',
+        'beacon/src/gate.ts — an empty window is treated as unknown, never as full availability',
       ],
     }
   }
@@ -168,8 +175,9 @@ export function budgetRow(budget: ErrorBudget): BudgetRow {
         glyph: '?',
         tone: 'unknown',
         meaning:
-          'No observations were recorded in the window. That is an unknown, and the gate refuses ' +
-          'on it rather than treating an empty window as perfect.',
+          'Nothing landed in this window to count, so there is no burn to report. The gate calls ' +
+          'that an unknown and refuses on it, rather than treating an empty window as proof of ' +
+          'anything.',
       }
     : budget.exhausted
       ? {
@@ -177,14 +185,14 @@ export function budgetRow(budget: ErrorBudget): BudgetRow {
           glyph: '■',
           tone: 'stop',
           meaning:
-            'The whole allowance is gone. That is a change freeze on this service, enforced by ' +
-            'the gate rather than described in a document.',
+            'The budget is gone. This service is under a change freeze until the window rolls ' +
+            'forward, and the gate is what applies it — no document required.',
         }
       : {
-          word: 'Allowance remaining',
+          word: 'Budget left',
           glyph: '●',
           tone: 'clear',
-          meaning: 'Measured, and there is budget left to spend.',
+          meaning: 'Counted, and the window still has room for something to go wrong.',
         }
   return {
     slo: budget.slo,
@@ -233,8 +241,8 @@ export function errorBudgetSignal(
       // by a side door — a failure to read the objectives would make the gate look budget-aware.
       evaluated: false,
       sentence:
-        'This page could not read Beacon’s objectives, so it cannot tell you whether this ' +
-        'verdict took any error budget into account.',
+        'Beacon’s objectives could not be read from here, so whether this verdict weighed any ' +
+        'error budget is a question this page cannot answer either way.',
       reasonsMentionedBudgets,
     }
   }
@@ -242,15 +250,16 @@ export function errorBudgetSignal(
     return {
       evaluated: false,
       sentence:
-        'No objectives are registered, so the gate emitted no error-budget reason and could not ' +
-        'have: it produces those codes only from inside a loop over the registered objectives. ' +
-        'This verdict carries no error-budget signal at all — in either direction.',
+        'Not one target is registered, so the gate raised no error-budget reason — and was never ' +
+        'in a position to, because those codes come only from a loop over the registered ' +
+        'targets. Take this verdict as carrying no error-budget signal at all, in either ' +
+        'direction.',
       reasonsMentionedBudgets,
     }
   }
   return {
     evaluated: true,
-    sentence: `The gate evaluated ${String(objectives.slos.length)} registered objective(s) for this release.`,
+    sentence: `The gate weighed ${String(objectives.slos.length)} registered target(s) against this release.`,
     reasonsMentionedBudgets,
   }
 }

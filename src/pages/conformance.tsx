@@ -31,7 +31,9 @@ export function conformanceVoice(run: ConformanceRun): Voice {
       word: 'Breaking',
       glyph: '■',
       tone: 'stop',
-      meaning: 'This suite found breaking differences against the recorded corpus. It refuses the gate.',
+      meaning:
+        'This suite replied differently from the recording in a way that would break a client ' +
+        'written against the old answer. The gate refuses on it.',
     }
   }
   if (run.skipped > 0) {
@@ -40,15 +42,18 @@ export function conformanceVoice(run: ConformanceRun): Voice {
       glyph: '▲',
       tone: 'caution',
       meaning:
-        'Some vectors were not compared. A suite that could not be run reports under skipped, ' +
-        'never under passed.',
+        'Some interactions were never put side by side. Whatever could not be replayed is ' +
+        'counted under skipped and never under identical, so this run proves less than the ' +
+        'numbers beside it suggest.',
     }
   }
   return {
     word: 'No breaking differences',
     glyph: '●',
     tone: 'clear',
-    meaning: 'Every vector compared identically or benignly against the recorded corpus.',
+    meaning:
+      'Every interaction came back either exactly as recorded or different in a way that leaves ' +
+      'existing clients working.',
   }
 }
 
@@ -56,7 +61,7 @@ export function ConformancePage() {
   const conformance = useResource(
     (signal) => listConformance(signal),
     (data) => data.suites.length,
-    'The conformance results could not be read.',
+    'Beacon did not send back the conformance results.',
     [],
   )
 
@@ -65,14 +70,28 @@ export function ConformancePage() {
       <header className="bw-page__head">
         <h1 className="bw-page__title">Conformance</h1>
         <p className="bw-page__lead">
-          The latest replay of the recorded corpus, per suite. A breaking difference refuses the
-          gate; so does never having run at all — and the second is an unknown, which no override
-          can reach.
+          This page is not about whether anything is up. A suite replays a corpus of interactions
+          recorded earlier and holds each answer against the one on file, sorting every difference
+          into three piles. Identical is unchanged. Benign is changed in a way that leaves existing
+          callers working — a field appearing, an array growing. Breaking is the rest: a field
+          taken away, an array that shrank, anything a client written against the old shape would
+          fall over on.
+        </p>
+        <p className="bw-page__lead">
+          So a service can answer every probe, carry every journey and still fail here, by quietly
+          changing the shape of what it says. That failure is invisible to uptime and lands on
+          whoever integrated with you, which is why it holds a release.
+        </p>
+        <p className="bw-page__lead">
+          Beacon does not replay the corpus itself. CI does, and posts each suite’s result to{' '}
+          <code className="cf-num bw-code">POST /v1/conformance</code>. A breaking difference is a
+          known blocker and can be waived. A suite that never ran, skipped or errored is an unknown
+          — nobody compared anything — and no override reaches an unknown.
         </p>
       </header>
 
-      <Panel title="Latest run per suite" reads="GET /v1/conformance">
-        {conformance.state === 'loading' && <Loading label="Reading the conformance results" />}
+      <Panel title="The most recent run of each suite" reads="GET /v1/conformance">
+        {conformance.state === 'loading' && <Loading label="Asking Beacon for the conformance results" />}
         {conformance.state === 'failed' && conformance.error && (
           <Failed
             which="The conformance results"
@@ -83,19 +102,22 @@ export function ConformancePage() {
         {conformance.state === 'empty' && (
           <>
             <Empty
-              title="No conformance run has ever been recorded"
+              title="Not one suite has ever reported"
               meaning={
-                'Beacon answered with an empty list. Nothing has been compared against the ' +
-                'recorded corpus, so nobody knows whether the estate’s wire formats have changed.'
+                'Beacon holds no conformance run at all. Nothing has been held against the ' +
+                'recording, so no one can say whether this estate still answers the way its ' +
+                'callers were built to expect. Read that as an open question, not as a clean bill.'
               }
             />
             <Note tone="stop">
-              <strong>This is why the release gate is indeterminate right now.</strong> An empty
-              list produces the reason <code className="cf-num bw-code">conformance_never_run</code>
-              , which is an <em>unknown</em>. One unknown refuses the whole evaluation before
-              anything else is considered, and no override can waive it. A run is recorded by{' '}
-              <code className="cf-num bw-code">POST /v1/conformance</code> from CI, where{' '}
-              <code className="cf-num bw-code">@cloudsforge/conformance</code> replays the corpus.
+              <strong>This is what is holding every release.</strong> An empty table raises{' '}
+              <code className="cf-num bw-code">conformance_never_run</code>, an{' '}
+              <em>unknown</em>, and a single unknown settles the whole evaluation before any other
+              input is read. No override reaches it, so the only way forward is to make a run
+              happen. That comes from CI, where{' '}
+              <code className="cf-num bw-code">@cloudsforge/conformance</code> replays the corpus
+              and posts the result to{' '}
+              <code className="cf-num bw-code">POST /v1/conformance</code>.
             </Note>
           </>
         )}

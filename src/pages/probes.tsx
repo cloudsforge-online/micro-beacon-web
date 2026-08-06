@@ -22,24 +22,39 @@ import type { Voice } from '../lib/verdict.ts'
 export function probeVoice(state: ProbeState): Voice {
   switch (state) {
     case 'up':
-      return { word: 'Up', glyph: '●', tone: 'clear', meaning: 'The target answered as expected.' }
+      return {
+        word: 'Up',
+        glyph: '●',
+        tone: 'clear',
+        meaning: 'The target replied with the status this probe asks for, and replied quickly.',
+      }
     case 'degraded':
       return {
         word: 'Degraded',
         glyph: '▲',
         tone: 'caution',
-        meaning: 'The target answered, but slowly enough to count against it.',
+        meaning:
+          'The status was right and the reply was slow — over a second and a half, which is the ' +
+          'line between up and degraded.',
       }
     case 'down':
-      return { word: 'Down', glyph: '■', tone: 'stop', meaning: 'The target did not answer.' }
+      return {
+        word: 'Down',
+        glyph: '■',
+        tone: 'stop',
+        meaning:
+          'Enough checks failed in a row to cross the threshold. The target sent the wrong ' +
+          'status, refused the connection, or sent nothing before the deadline.',
+      }
     case 'pending':
       return {
         word: 'Not yet reported',
         glyph: '?',
         tone: 'unknown',
         meaning:
-          'This probe has never reported. It is not up and it is not down — nothing has been ' +
-          'measured, and Beacon publishes no metric for it at all rather than a zero.',
+          'No check has come back for this probe. Read that as neither up nor down: nothing ' +
+          'has been measured, and Beacon withholds the metric rather than publishing a zero ' +
+          'that every dashboard would draw as an outage.',
       }
   }
 }
@@ -48,7 +63,7 @@ export function ProbesPage() {
   const probes = useResource(
     (signal) => listProbes(signal),
     (data) => data.probes.length,
-    'The probe list could not be read.',
+    'Beacon did not send back the probe list.',
     [],
   )
 
@@ -57,14 +72,29 @@ export function ProbesPage() {
       <header className="bw-page__head">
         <h1 className="bw-page__title">Probes</h1>
         <p className="bw-page__lead">
-          Individual HTTP checks against estate targets.{' '}
-          <strong>These are not a release-gate input.</strong> The gate reads journeys, error
-          budgets, conformance and open incidents; a probe reaches it only by opening an incident.
+          A probe is a single HTTP request, sent on its own cadence from wherever Beacon is
+          running. It counts as a pass only when the target comes back with the exact status the
+          probe asks for. Redirects are not followed, so a 302 where a 200 was wanted fails like
+          any other wrong answer.
+        </p>
+        <p className="bw-page__lead">
+          A correct but slow reply — over a second and a half — is degraded, not up. Silence past
+          the probe’s deadline is down. One bad request is not enough to move the state either: it
+          takes a run of consecutive failures to bring a target down and a run of clean replies to
+          bring it back, so a dropped packet pages nobody. Three and two are the defaults, and this
+          estate can set both.
+        </p>
+        <p className="bw-page__lead">
+          <strong>Nothing on this page reaches the release gate directly.</strong> The gate reads
+          journeys, error budgets, conformance and open incidents; a probe gets a hearing there
+          only once it has opened an incident. And a probe watches from one vantage point, so
+          “down” means the target stopped answering Beacon — not that a user has noticed. Look at
+          the journeys to find out whether anyone has.
         </p>
       </header>
 
-      <Panel title="Registered probes" reads="GET /v1/probes">
-        {probes.state === 'loading' && <Loading label="Reading the probe list" />}
+      <Panel title="Every registered probe" reads="GET /v1/probes">
+        {probes.state === 'loading' && <Loading label="Asking Beacon which probes are registered" />}
         {probes.state === 'failed' && probes.error && (
           <Failed which="The probe list" notice={probes.error} onRetry={probes.reload} />
         )}
@@ -73,17 +103,17 @@ export function ProbesPage() {
             <Empty
               title="No probes are registered"
               meaning={
-                'Beacon answered with an empty list. There is no per-target HTTP check running in ' +
-                'this estate at all, so nothing on this page — and nothing on the public status ' +
-                'page, which projects from the same table — is reporting target health.'
+                'Beacon answered, and the list it sent back was empty. Read this as coverage, ' +
+                'not as calm: not one address in the estate is being checked, so neither this ' +
+                'page nor the public status page — which draws from the same table — can tell ' +
+                'you anything about whether a target is answering.'
               }
             />
             <Note tone="warn">
-              A probe is registered through the admin-only{' '}
-              <code className="cf-num bw-code">PUT /v1/probes/:name</code>, and Beacon ships no
-              catalogue of its own. This is the same shape of gap as the empty objectives table:
-              nothing seeds it, so nothing is measured, and the absence reports as silence rather
-              than as an alarm.
+              Rows appear here once somebody registers a probe through the admin-only{' '}
+              <code className="cf-num bw-code">PUT /v1/probes/:name</code>. Beacon carries no
+              built-in catalogue, so an estate nobody has registered probes for reports silence and
+              never an alarm. That silence is the thing to act on.
             </Note>
           </>
         )}
@@ -101,10 +131,14 @@ export function ProbesPage() {
                   <code className="cf-num bw-code">
                     {probe.method} {probe.url}
                   </code>{' '}
-                  → expects <span className="cf-num">{probe.expectStatus}</span>
+                  → passes only on <span className="cf-num">{probe.expectStatus}</span>
                 </p>
                 <p className="bw-row__meta">
-                  {probe.productGroup} · in this state since <When iso={probe.since} />
+                  checked every <span className="cf-num">{probe.intervalMs / 1000}s</span>, giving
+                  up after <span className="cf-num">{probe.deadlineMs / 1000}s</span>
+                </p>
+                <p className="bw-row__meta">
+                  {probe.productGroup} · unchanged since <When iso={probe.since} />
                 </p>
               </li>
             ))}

@@ -6,8 +6,9 @@
  *
  * The fact it defends is live, in this estate, right now. `GET /v1/slos` answers
  * `{"slos":[],"budgets":[]}` — verified with curl before a line of `src/lib/objectives.ts` was
- * written — because Beacon's `slos` table is empty and nothing seeds it. `upsertSlo` has exactly
- * one caller, the admin-only `PUT /v1/slos/:name`, and Beacon ships no catalogue.
+ * written — because Beacon's `slos` table is empty here. `upsertSlo` has exactly one caller, the
+ * admin-only `PUT /v1/slos/:name`; `beacon slo-seed` is the command that calls it for every
+ * journey, and it is a deploy step nobody has run against this estate.
  *
  * Trace it into the gate. `collectReasons` emits `error_budget_no_data` and
  * `error_budget_exhausted` from INSIDE a loop over `await allBudgets(sql, inputs.now)`
@@ -81,10 +82,10 @@ describe('the empty objectives table is never rendered as healthy', () => {
     assert.equal(panel.kind, 'no-objectives')
   })
 
-  it('says "no objectives defined", in the headline and in the badge word', () => {
+  it('says "no objective is set", in the headline and in the badge word', () => {
     if (panel.kind !== 'no-objectives') throw new Error('unreachable')
-    assert.match(panel.headline, /no objectives defined/i)
-    assert.match(panel.voice.word, /no objectives defined/i)
+    assert.match(panel.headline, /no objective is set/i)
+    assert.match(panel.voice.word, /no objective is set/i)
   })
 
   it('carries NO figure at all — not a nought, not a percentage, not a remaining count', () => {
@@ -119,13 +120,13 @@ describe('the empty objectives table is never rendered as healthy', () => {
     // indistinguishable from a clean pass, so a label alone is not enough. The consequence has to
     // be spelled out, and the page has to carry it on the GATE's own screen as well as this one.
     assert.match(panel.gateConsequence, /release gate/i)
-    assert.match(panel.gateConsequence, /not checking error budgets/i)
+    assert.match(panel.gateConsequence, /weighing no error budget/i)
     assert.match(panel.gateConsequence, /no error-budget signal/i)
   })
 
   it('says why the absence is not a nought, without inventing an objective', () => {
     if (panel.kind !== 'no-objectives') throw new Error('unreachable')
-    assert.match(panel.whyNotZero, /zero observations is not full availability/i)
+    assert.match(panel.whyNotZero, /an empty window is not perfect availability/i)
     // The refusal to invent one is itself the claim, and it is checked, because two agents before
     // this one refused on the same grounds and the reasoning is the thing worth keeping.
     assert.match(panel.whyNotZero, /threshold nobody agreed to/i)
@@ -179,7 +180,7 @@ describe('the error-budget signal a verdict carries', () => {
     // this page's own invention.
     const signal = errorBudgetSignal(null, noBudgetReasons)
     assert.equal(signal.evaluated, false)
-    assert.match(signal.sentence, /could not read/i)
+    assert.match(signal.sentence, /could not be read/i)
   })
 
   it('an absent budget reason means nothing on its own, and the type says which question is which', () => {

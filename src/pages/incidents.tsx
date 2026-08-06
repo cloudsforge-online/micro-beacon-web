@@ -27,8 +27,9 @@ export function severityVoice(severity: Severity): Voice {
     glyph: blocks ? '■' : '▲',
     tone: blocks ? 'stop' : 'caution',
     meaning: blocks
-      ? 'This severity blocks the release gate while it is open.'
-      : 'This severity does not block the release gate — a gate that blocked its own remedy would get switched off.',
+      ? 'While this one is open, no release ships. Closing it or waiving it are the only ways past.'
+      : 'This one holds nothing up. Refusing releases over a degraded corner would stop the estate ' +
+        'shipping the fix for it, and a gate that blocks its own remedy is a gate somebody turns off.',
   }
 }
 
@@ -37,7 +38,7 @@ export function IncidentsPage() {
   const incidents = useResource(
     (signal) => listIncidents(openOnly, signal),
     (data) => data.incidents.length,
-    'The incident list could not be read.',
+    'Beacon did not send back the incident list.',
     // The value, not the closure. This is the parameter the request is built from, so it has to
     // be what re-runs the effect.
     [openOnly],
@@ -51,8 +52,25 @@ export function IncidentsPage() {
       <header className="bw-page__head">
         <h1 className="bw-page__title">Incidents</h1>
         <p className="bw-page__lead">
-          What Beacon has opened, from its own journey failures and from Alertmanager. An open SEV1
-          or SEV2 refuses every release until it is closed.
+          An incident marks a failure that outlasted the smoothing, not a single bad check. Beacon
+          raises one on its own when a probe misses three checks running, when a journey fails or
+          errors twice in a row, or when Alertmanager posts an alert. An operator can also open one
+          by hand. Further failures against the same subject fold into the incident already open and
+          push its count up, so one broken target never becomes forty rows.
+        </p>
+        <p className="bw-page__lead">
+          Recovery closes them the same way it opened them. A probe that answers cleanly twice
+          closes its incident; a journey closes its own by passing again. A skip closes nothing — a
+          journey that can only skip has gone quiet, which is not the same as having recovered.
+          Anything Beacon cannot close for itself, including every alert and every manual incident,
+          is closed by a person at{' '}
+          <code className="cf-num bw-code">POST /v1/incidents/:id/close</code>.
+        </p>
+        <p className="bw-page__lead">
+          Beacon opens a critical subject at SEV2 and everything else at SEV3, and it will never
+          declare a SEV1 by itself — that call belongs to a person looking at the evidence. Severity
+          climbs while an incident is open and never drops back. <strong>SEV1 and SEV2 turn every
+          release away until they close;</strong> SEV3 and SEV4 do not.
         </p>
       </header>
 
@@ -78,29 +96,34 @@ export function IncidentsPage() {
       {blocking.length > 0 && (
         <Note tone="stop">
           <strong>
-            {blocking.length} open incident(s) at SEV1 or SEV2 are refusing every release right now.
+            Nothing can ship while these {blocking.length} incident(s) stay open at SEV1 or SEV2.
           </strong>{' '}
-          Each one appears on the gate page as an{' '}
-          <code className="cf-num bw-code">incident_open</code> reason, classified{' '}
-          <em>known</em> — so break-glass can waive it, with a name and a written reason attached.
+          Each one reaches the gate page as an{' '}
+          <code className="cf-num bw-code">incident_open</code> reason, filed <em>known</em> —
+          somebody measured it and it is bad. Known blockers can be waived through break-glass, and
+          the waiver carries a name and a written reason for as long as it lasts.
         </Note>
       )}
 
       <Panel title={openOnly ? 'Open incidents' : 'Recent incidents'} reads={`GET /v1/incidents?open=${String(openOnly)}`}>
-        {incidents.state === 'loading' && <Loading label="Reading the incident list" />}
+        {incidents.state === 'loading' && <Loading label="Asking Beacon for the incidents" />}
         {incidents.state === 'failed' && incidents.error && (
           <Failed which="The incident list" notice={incidents.error} onRetry={incidents.reload} />
         )}
         {incidents.state === 'empty' && (
           <Empty
-            title={openOnly ? 'No incidents are open' : 'No incidents were opened in the window'}
+            title={openOnly ? 'Nothing is open right now' : 'Nothing was opened inside the window'}
             meaning={
               openOnly
-                ? 'Beacon answered with an empty list, so no incident is blocking a release. Note ' +
-                  'the scope of that: it says nothing about the journeys, budgets or conformance ' +
-                  'the gate also reads.'
-                : 'Beacon answered with an empty list for the configured window. An incident older ' +
-                  'than the window is not shown here and is not gone.'
+                ? 'Beacon has no incident on its books, so none is turning releases away. Be ' +
+                  'careful how far you take that. An estate where every probe and journey is ' +
+                  'green produces this exact screen, and so does an estate where none is ' +
+                  'registered and nothing is being watched at all — check the probes and journeys ' +
+                  'pages to tell the two apart. It also says nothing about budgets or ' +
+                  'conformance, which the gate weighs separately.'
+                : 'Beacon found none opened inside the window it keeps. Anything older has aged ' +
+                  'out of this view rather than disappeared, so an incident you remember may still ' +
+                  'be open — out of range here rather than gone.'
             }
           />
         )}
@@ -124,9 +147,9 @@ export function IncidentsPage() {
                   </p>
                 )}
                 <p className="bw-row__meta">
-                  {incident.productGroup} · detected by {incident.detectedBy} ·{' '}
-                  <span className="cf-num">{incident.failures}</span> consecutive failure(s) · open
-                  since <When iso={incident.openedAt} />
+                  {incident.productGroup} · found by {incident.detectedBy} ·{' '}
+                  <span className="cf-num">{incident.failures}</span> failure(s) folded in · opened{' '}
+                  <When iso={incident.openedAt} />
                 </p>
               </li>
             ))}

@@ -14,10 +14,12 @@ export function NotFoundPage() {
       <span className="bw-state__icon" aria-hidden="true">
         ⌀
       </span>
-      <p className="bw-state__title">This console does not serve that address</p>
+      <p className="bw-state__title">There is no page at that address</p>
       <p className="bw-state__hint">
-        The server answered <span className="cf-num">404</span> and then served this bundle, so the
-        status line and this page agree. Nothing was asked of Beacon.
+        The server answered <span className="cf-num">404</span> before it handed over this
+        screen, so a monitor watching this request sees a miss too — no page here quietly reports
+        success. Beacon was not asked anything, and nothing is broken. One of the console’s own
+        pages is below.
       </p>
       <ul className="bw-state__links">
         {NAV.map((item) => (
