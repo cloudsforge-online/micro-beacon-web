@@ -475,7 +475,7 @@ export type BootResult = 'signed-in' | 'signed-out' | 'asking-the-portal'
  * (`hub-web/src/pages/account.tsx:210-236`). `admin-web` has crossed that bridge all along, from
  * `ProtectedRoute` (`admin-web/src/lib/auth.tsx:202-215`); this console never did, and the cost
  * was not only a sign-in panel shown to somebody already signed in. `CloudsForgeFooter` decides
- * `adminOnly` visibility from `account.roles` (`ui/packages/ui/src/index.tsx:969`), so with no
+ * `adminOnly` visibility from `account.roles` (`ui/packages/ui/src/index.tsx:1376`), so with no
  * session there are no roles, and the footer hid Admin, Foresight Admin, Lantern and Beacon from
  * every operator on the two consoles those links matter most on. `micro-ui`'s `pnpm footer-audit`
  * reported exactly that, four times per surface, the day it began signing in for `adminOnly`

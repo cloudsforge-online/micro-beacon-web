@@ -11,11 +11,11 @@
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * NOTHING IN THIS FILE MAY BE DRAWN IN `var(--cf-accent)`.
  *
- * This surface's accent is signal green (`ui/packages/ui/src/tokens.css:607-613`), deliberately
+ * This surface's accent is signal green (`ui/packages/ui/src/tokens.css:943-955`), deliberately
  * the chart `good` step, because for a status tool "the surface agreeing with its healthiest
  * verdict is correct". The registry adds the constraint in the same note: "Beacon's own pages
  * still reserve green/amber/red for probe verdicts"
- * (`ui/packages/ui/src/surfaces.ts:392-395`).
+ * (`ui/packages/ui/src/surfaces.ts:416-418`).
  *
  * So a `Badge` inheriting the accent would render every state green — including `Refused`. The
  * four tones map to `--cf-viz-good`, `--cf-viz-warn`, `--cf-viz-crit` and `--cf-fg-mute`, and

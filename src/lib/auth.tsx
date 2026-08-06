@@ -17,7 +17,7 @@
  *     `beacon/src/server.ts:870-898` checks the static break-glass token and then requires an
  *     identity JWT; there is no anonymous branch on any `/v1` route. A signed-out visitor firing
  *     the six reads gets six 401s.
- *   * `beacon` is `adminOnly: true` in the registry (`ui/packages/ui/src/surfaces.ts:406`), and
+ *   * `beacon` is `adminOnly: true` in the registry (`ui/packages/ui/src/surfaces.ts:448`), and
  *     what these pages show is not public: open incident subjects, their last error strings, which
  *     journeys are muted and by whom. `beacon/src/publicstatus.ts` exists precisely because that
  *     material has to be PROJECTED away before it can be shown to anybody — that projection is
@@ -32,7 +32,7 @@
  *
  * **It does not check roles.** `beacon` is `adminOnly` in the registry, but that flag governs the
  * SWITCHER — "it just keeps a menu entry nobody can open out of every player's face"
- * (`ui/packages/ui/src/surfaces.ts:640-642`) — and `authorise()` accepts ANY authenticated user
+ * (`ui/packages/ui/src/surfaces.ts:308-312`) — and `authorise()` accepts ANY authenticated user
  * principal for `READ_SCOPE` and `GATE_SCOPE` (`beacon/src/server.ts:895`). Only the write routes
  * pass `adminOnly: true`, and this bundle calls none of them.
  *

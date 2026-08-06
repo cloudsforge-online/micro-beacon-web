@@ -54,7 +54,7 @@ import { cloudsforgeHosts, type CloudsForgeHosts, type SurfaceKey } from '@cloud
 /**
  * The surface this application IS.
  *
- * `markId` is null for it (`ui/packages/ui/src/surfaces.ts:400`), so no mark is rendered anywhere
+ * `markId` is null for it (`ui/packages/ui/src/surfaces.ts:421`), so no mark is rendered anywhere
  * in this bundle — see the note in `src/components/shell.tsx`.
  */
 export const PRODUCT: SurfaceKey = 'beacon'

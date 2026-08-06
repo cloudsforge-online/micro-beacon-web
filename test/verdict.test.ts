@@ -278,7 +278,7 @@ describe('no verdict is drawn in the surface accent', () => {
 
   it('never applies --cf-accent to a badge, a verdict or a tone', () => {
     // This surface's accent IS the chart `good` step (signal green), so a verdict that inherited
-    // it would render `refuse` in the colour of a pass. `ui/packages/ui/src/surfaces.ts:392-395`
+    // it would render `refuse` in the colour of a pass. `ui/packages/ui/src/surfaces.ts:416-418`
     // states the constraint: "Beacon's own pages still reserve green/amber/red for probe
     // verdicts."
     for (const [selector, body] of rules) {

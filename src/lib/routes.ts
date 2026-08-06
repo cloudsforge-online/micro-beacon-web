@@ -38,7 +38,7 @@ export interface AppRoute {
  * `micro-explorer-web`'s equivalent has one, because its reads are anonymous. Nothing here is:
  * `authorise()` (`beacon/src/server.ts:870-898`) requires a static token or an identity JWT on
  * every `/v1` route, and `beacon` is `adminOnly: true` in the registry
- * (`ui/packages/ui/src/surfaces.ts:406`). A column that would read `false` on every row is a column
+ * (`ui/packages/ui/src/surfaces.ts:448`). A column that would read `false` on every row is a column
  * somebody eventually reads as meaningful, so the fact is stated once, here, and enforced once, in
  * `src/app.tsx`, where a single gate wraps the whole tree.
  */

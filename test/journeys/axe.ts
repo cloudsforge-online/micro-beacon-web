@@ -15,6 +15,7 @@
  */
 import { createRequire } from 'node:module'
 import { readFileSync } from 'node:fs'
+import { MAIN_ID } from '@cloudsforge/ui'
 import type { Page } from 'playwright-core'
 
 const require = createRequire(import.meta.url)
@@ -298,7 +299,16 @@ export async function textOrder(page: Page, first: string, second: string): Prom
  * the left. Asserting an axis would assert one implementation and fail a correct alternative,
  * which is how a guard ends up being deleted rather than satisfied.
  */
-export async function assertSkipLink(page: Page, where: string, target = '#main'): Promise<void> {
+export async function assertSkipLink(
+  page: Page,
+  where: string,
+  // `MAIN_ID` and not the string `main`, which is what this default used to be. The shell renders
+  // `<SkipLink>` and `<MainRegion>` from @cloudsforge/ui, and both compose their href and their id
+  // from that one constant (`ui/packages/ui/src/index.tsx:1033`) — so a default typed out here
+  // would be a fourth opinion about the landmark's name, and the first caller of this helper would
+  // have found it wrong. The parameter stays, for a surface that keeps its own `<main>`.
+  target = `#${MAIN_ID}`,
+): Promise<void> {
   const inViewport = () =>
     page.evaluate(() => {
       const el = document.activeElement as HTMLElement | null

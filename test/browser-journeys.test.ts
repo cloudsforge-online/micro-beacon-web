@@ -19,7 +19,10 @@
  */
 import assert from 'node:assert/strict'
 import { after, describe, it } from 'node:test'
-import { SURFACES } from '@cloudsforge/ui'
+import { MAIN_ID, SURFACES } from '@cloudsforge/ui'
+import { surfaceMeta } from '@cloudsforge/ui/seo'
+import { robotsTxt } from '@cloudsforge/ui/sitemap'
+import { assertLandmarks, assertSkipLink } from './journeys/axe.ts'
 import {
   assertMounted,
   closeBrowser,
@@ -558,5 +561,202 @@ describe('the addresses this console serves', () => {
     assert.equal(answer.status, 404)
     assert.match(answer.type, /text\/plain/)
     assert.match(answer.body, /belongs to micro-beacon/)
+  })
+
+  it('refuses every crawler at /robots.txt and has no sitemap to give', async () => {
+    /*
+     * Driven rather than read. `test/sitemap.test.ts` compares the body in nginx.conf with what
+     * `robotsTxt()` generates, which proves the CONFIG is right; this proves the config is also
+     * REACHED — that `location = /robots.txt` wins over the `location /` prefix that serves the
+     * static tree, and that `location = /sitemap.xml` produces a 404 rather than a document.
+     *
+     * The expectation is the same generated string, not a second copy of it.
+     */
+    const surface = await startSurface()
+    const robots = await surface.fetchStatus('/robots.txt')
+    assert.equal(robots.status, 200)
+    assert.match(robots.type, /text\/plain/)
+    assert.equal(robots.body, robotsTxt({ indexable: false }))
+
+    // 404, and the app shell under it — the same answer as any other address this surface does not
+    // serve, which is what makes the absence indistinguishable from an address that never existed.
+    const sitemap = await surface.fetchStatus('/sitemap.xml')
+    assert.equal(sitemap.status, 404)
+    assert.match(sitemap.type, /text\/html/)
+  })
+})
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+ * THE 1.1 SHELL, DRIVEN RATHER THAN READ
+ *
+ * Every assertion in this block is about something a stylesheet grep or a config parse cannot
+ * answer: where focus goes, what the tab order is, what the head says AFTER a client-side
+ * navigation, and what the browser was asked to fetch. The skip link is the sharpest case — this
+ * surface HAD one, it pointed at a real element, and it did not work, because the element was not
+ * focusable. Nothing that reads source could have told the difference.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+describe('the shell a keyboard reader meets', () => {
+  it('puts the skip link first in the tab order and lands focus inside the main landmark', async () => {
+    const surface = await startSurface()
+    const session = await renderOnlyWithStubbedNetwork(surface.origin, {
+      path: '/?release=probe-1',
+      stubs: [portal(false), PORTAL_FAVICON],
+      apiPrefixes: SERVICE_PREFIXES,
+    })
+    try {
+      await session.page.goto(`${surface.origin}/?release=probe-1`, { waitUntil: 'domcontentloaded' })
+      await assertMounted(session, { showing: ['Beacon is an operator surface'] })
+
+      // Tab once from the top: the skip link, visible, pointing at the landmark that exists.
+      await assertSkipLink(session.page, 'the signed-out console')
+
+      /*
+       * AND THE HALF THAT WAS BROKEN. Following the link must MOVE FOCUS, not merely scroll. The
+       * old `<main id="main">` carried no `tabIndex={-1}`, so Chrome scrolled the page, left focus
+       * on the link, and sent the next Tab back into the company bar — a reader looking at the
+       * content while tabbing through the chrome they had just asked to skip.
+       *
+       * Read as "is the active element the main region, or inside it", because a browser is
+       * entitled to move focus to the target itself and this asserts the outcome rather than one
+       * implementation of it.
+       */
+      await session.page.keyboard.press('Enter')
+      const landed = await session.page.evaluate((id: string) => {
+        const main = document.getElementById(id)
+        const active = document.activeElement
+        return {
+          exists: Boolean(main),
+          focusable: main?.getAttribute('tabindex'),
+          inside: Boolean(main && active && (active === main || main.contains(active))),
+        }
+      }, MAIN_ID)
+      assert.equal(landed.exists, true, `there is no #${MAIN_ID} on the page`)
+      assert.equal(landed.focusable, '-1', 'the main landmark is not focusable, so the link only scrolls')
+      assert.equal(landed.inside, true, 'following the skip link left focus outside the main region')
+    } finally {
+      await session.close()
+    }
+  })
+
+  it('has exactly one main landmark and no skipped heading level', async () => {
+    const surface = await startSurface()
+    const session = await renderOnlyWithStubbedNetwork(surface.origin, {
+      path: '/?release=probe-1',
+      stubs: [portal(true), REDEEM, PORTAL_FAVICON, ...READS],
+      apiPrefixes: SERVICE_PREFIXES,
+    })
+    try {
+      // Signed in, so the gate page is what is measured rather than the sign-in panel — that is
+      // the page with the deepest heading tree on this surface.
+      await assertMounted(session, { showing: ['estateadmin'] })
+      await assertLandmarks(session.page, 'the release gate')
+    } finally {
+      await session.close()
+    }
+  })
+})
+
+describe('the head follows the address', () => {
+  it('retitles the document on a client-side navigation, from the ROUTES table', async () => {
+    const surface = await startSurface()
+    const session = await renderOnlyWithStubbedNetwork(surface.origin, {
+      path: '/?release=probe-1',
+      stubs: [portal(true), REDEEM, PORTAL_FAVICON, ...READS, ['GET /v1/journeys', { json: { journeys: [] } }]],
+      apiPrefixes: SERVICE_PREFIXES,
+    })
+    try {
+      await assertMounted(session, { showing: ['estateadmin'] })
+
+      /*
+       * The index, titled from its own `ROUTES` label rather than from the surface name alone —
+       * `Release gate — Beacon`, which is also what index.html now states statically. Composed
+       * here rather than typed, so this scenario cannot be the thing that goes stale.
+       */
+      assert.equal(await session.page.title(), surfaceMeta('beacon', { title: 'Release gate' }).title)
+
+      /*
+       * A CLIENT-SIDE navigation, through the sub-navigation, which is the only kind that can go
+       * wrong here: a full page load re-reads index.html and would be titled correctly by the
+       * static tag alone. `DocumentMeta` is driven by `useLocation()`, so this is the assertion
+       * that it is mounted in the shell rather than in a page that remembered to call it.
+       */
+      await session.page.click('.bw-subnav__link[href="/journeys"]')
+      await session.page.waitForFunction(() => document.title.startsWith('Journeys'), undefined, {
+        timeout: 5_000,
+      })
+      assert.equal(session.page.url(), `${surface.origin}/journeys`)
+      assert.equal(await session.page.title(), surfaceMeta('beacon', { title: 'Journeys' }).title)
+
+      // The canonical moved with it, and there is exactly one of it. `applyHead` updates tags IN
+      // PLACE; the bug every hand-rolled version of this has is appending, which leaves the
+      // previous page's canonical first in the head and therefore the one that wins.
+      const head = await session.page.evaluate(() => ({
+        canonicals: [...document.querySelectorAll('link[rel="canonical"]')].map((l) =>
+          l.getAttribute('href'),
+        ),
+        robots: [...document.querySelectorAll('meta[name="robots"]')].map((m) =>
+          m.getAttribute('content'),
+        ),
+        lang: document.documentElement.lang,
+      }))
+      assert.deepEqual(head.canonicals, [`${surface.origin}/journeys`])
+
+      /*
+       * ONE robots tag, carrying the DERIVED directive. Two would be the real risk: index.html
+       * states `noindex, nofollow` statically and `applyHead` writes the same name, so an
+       * implementation that appended rather than updated would leave a stale first tag — and the
+       * first matching tag is the one a crawler obeys, which is how a page ends up indexed while
+       * every layer of its own source says it should not be.
+       */
+      assert.deepEqual(head.robots, [surfaceMeta('beacon').robots])
+      assert.equal(head.robots[0], 'noindex, nofollow')
+      assert.equal(head.lang, 'en-GB')
+    } finally {
+      await session.close()
+    }
+  })
+})
+
+describe('consent, on a surface that measures nothing', () => {
+  it('sets no cookie, fetches nothing third-party, and draws no banner', async () => {
+    /*
+     * THE THREE THINGS THAT MUST BE TRUE ON LOAD, and the reason `initAnalytics()` is called on a
+     * surface with no measurement ID. Under ePrivacy Art. 5(3) a cookie set before consent is a
+     * violation that a banner underneath it does not cure, so "no cookie yet" is not a detail of
+     * the implementation — it is the requirement.
+     *
+     * The banner's absence is the second half and is deliberate rather than a gap: `CookieBanner`
+     * is mounted in the shell and returns null because `analyticsId()` finds no
+     * `<meta name="cf-analytics">`. Mounting a component that renders nothing keeps this shell the
+     * same shape as every other surface's, so the gate is already in front of the tag on the day
+     * somebody adds one.
+     */
+    const surface = await startSurface()
+    const session = await renderOnlyWithStubbedNetwork(surface.origin, {
+      path: '/?release=probe-1',
+      stubs: [portal(true), REDEEM, PORTAL_FAVICON, ...READS],
+      apiPrefixes: SERVICE_PREFIXES,
+    })
+    try {
+      await assertMounted(session, { showing: ['estateadmin'] })
+
+      assert.deepEqual(await session.context.cookies(), [], 'something set a cookie before consent')
+
+      // Nothing was even ASKED for from a measurement host. Assembled so this assertion does not
+      // match its own explanation, and checked over every request the page sent.
+      const tagHost = ['googletagmanager', '.com'].join('')
+      const offOrigin = session
+        .apiCalls()
+        .map((r) => r.url)
+        .filter((url) => url.includes(tagHost) || url.includes('google-analytics'))
+      assert.deepEqual(offOrigin, [], 'the page fetched an analytics script')
+
+      // And the banner is not on the page, because there is nothing to consent to.
+      const banner = await session.page.evaluate(() => document.querySelectorAll('.cf-consent').length)
+      assert.equal(banner, 0, 'a consent banner was drawn on a surface that measures nothing')
+    } finally {
+      await session.close()
+    }
   })
 })

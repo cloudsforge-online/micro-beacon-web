@@ -22,10 +22,10 @@
  *    precisely so that a screen cannot render one where the other belongs.
  *
  * 3. **That the verdict is the surface's accent colour.** `beacon`'s accent is signal green
- *    (`ui/packages/ui/src/tokens.css:607-613`), deliberately the chart `good` step, because for a
+ *    (`ui/packages/ui/src/tokens.css:943-955`), deliberately the chart `good` step, because for a
  *    status tool "the surface agreeing with its healthiest verdict is correct" — and the registry
  *    adds, in the same breath, that "Beacon's own pages still reserve green/amber/red for probe
- *    verdicts" (`ui/packages/ui/src/surfaces.ts:392-395`). The headline answer on this app's
+ *    verdicts" (`ui/packages/ui/src/surfaces.ts:416-418`). The headline answer on this app's
  *    landing page is usually `refuse`. A verdict drawn in `var(--cf-accent)` would therefore
  *    inherit the page's green and a refusal would render as a pass. Every `Voice` below carries a
  *    `tone` that maps to a RESERVED status token only, and `test/verdict.test.ts` fails if
