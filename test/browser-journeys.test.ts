@@ -487,7 +487,7 @@ describe('the estate footer', () => {
       // Nothing is marked current: this surface is adminOnly, so its own link is not on the page
       // for a stranger to be standing on. The identity line still says where they are.
       assert.deepEqual(f.links.filter((l) => l.current), [])
-      assert.match(f.text, /Beacon — Status & uptime/)
+      assert.match(f.text, /Beacon — Uptime, release gates and the checks behind them/)
       assert.match(f.text, /same hostname as the service it reads/)
 
       // The stylesheet reached the page. A footer whose markup is perfect and whose CSS never
