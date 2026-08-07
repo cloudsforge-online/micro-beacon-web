@@ -80,10 +80,22 @@ export function GatePage() {
       <header className="bw-page__head">
         <h1 className="bw-page__title">Release gate</h1>
         <p className="bw-page__lead">
-          Whether a release manifest may be promoted, and every reason it may not. Asking is
-          read-only: this page only ever sends <code className="cf-num bw-code">GET /v1/gate</code>,
-          so the answer you see is the answer the pipeline would get, and asking twice changes
-          nothing.
+          One question, asked per release: may this build be promoted? Beacon answers from four
+          inputs — the journeys, the error budgets, the conformance suites and any incident still
+          open — and lists every reason it is saying no.
+        </p>
+        <p className="bw-page__lead">
+          A refusal is not advice. The same call runs in the pipeline as{' '}
+          <code className="cf-num bw-code">beacon gate</code>, which exits non-zero and stops the
+          promotion, so a blocked gate means the build does not go out. Two things clear it: fix
+          what it named, or have somebody with break-glass waive it. A waiver names one reason code,
+          carries the author and a written reason, and expires within twelve hours — and it can only
+          ever touch a blocker Beacon measured. Anything nobody measured is beyond reach.
+        </p>
+        <p className="bw-page__lead">
+          Asking costs nothing. This page only ever sends{' '}
+          <code className="cf-num bw-code">GET /v1/gate</code>, which records no decision, so you
+          are seeing what the pipeline would see and you can ask as often as you like.
         </p>
       </header>
 
@@ -108,19 +120,19 @@ export function GatePage() {
           Ask the gate
         </button>
         <p className="bw-ask__help" id="bw-release-help">
-          Up to 128 characters of letters, digits, dot, underscore or hyphen, starting with a letter
-          or a digit. Beacon validates the same shape at{' '}
-          <code className="cf-num bw-code">beacon/src/server.ts</code> and answers 400 for
-          anything else.
+          Letters, digits, dots, underscores and hyphens, up to 128 of them, opening with a letter
+          or a digit. Beacon holds tags to the same shape and turns anything else away with a 400,
+          so a tag this box accepts is one the service will too.
         </p>
       </form>
 
       {release === '' ? (
         <Empty
-          title="No release has been named yet"
+          title="Name a release and the gate will answer"
           meaning={
-            'The gate is asked per release, so there is no question to answer until you type a ' +
-            'tag. Nothing has been requested from Beacon — this is not an empty result.'
+            'Every verdict is about one specific build, so there is no question on the table ' +
+            'until you enter a tag. Beacon has not been asked anything — this is a blank form, ' +
+            'not a result that came back empty.'
           }
         />
       ) : validity.ok ? (
@@ -134,12 +146,12 @@ export function GatePage() {
             ▲
           </span>
           <p className="bw-state__title">
-            <code className="cf-num bw-code">{release}</code> is not a release tag
+            <code className="cf-num bw-code">{release}</code> is not the shape of a release tag
           </p>
           <p className="bw-state__hint">{validity.why}</p>
           <p className="bw-state__meta">
-            Nothing was sent to Beacon. This is this page refusing to ask a malformed question, not
-            Beacon refusing the release.
+            No request went out, so nothing about your release has been decided. This is the form
+            declining to ask a malformed question — correct the tag and ask again.
           </p>
         </div>
       )}
@@ -162,7 +174,7 @@ function GateResult({ release }: { release: string }) {
   const gate = useResource(
     (signal) => askGate(release, signal),
     () => 1,
-    'Beacon could not be reached, so the gate was never asked.',
+    'Beacon could not be reached, so the question never got there.',
     [release],
   )
   const objectives = useResource(
@@ -170,13 +182,13 @@ function GateResult({ release }: { release: string }) {
     // Counted by `slos`, not by `budgets`. An estate with objectives but no observations yet has
     // budgets of its own; an estate with no objectives has neither, and that is the case here.
     (data) => data.slos.length,
-    'Beacon’s objectives could not be read.',
+    'Beacon did not send back its objectives.',
     [release],
   )
   const history = useResource(
     (signal) => gateHistory(release, signal),
     (data) => data.decisions.length,
-    'The recorded decisions for this release could not be read.',
+    'Beacon did not send back the decisions on record for this release.',
     [release],
   )
 
@@ -213,10 +225,10 @@ function GateResult({ release }: { release: string }) {
               ══════════════════════════════════════════════════════════════════════════════════
             */}
             <Note tone="stop">
-              <strong>This is not a refusal.</strong> Beacon has not said anything about{' '}
-              <code className="cf-num bw-code">{release}</code>. Do not read this screen as a block
-              and do not read it as a pass — retrying is reasonable, and shipping on the strength of
-              it is not.
+              <strong>This is not a refusal.</strong> Beacon has said nothing whatsoever about{' '}
+              <code className="cf-num bw-code">{release}</code>; the question never got there. Do
+              not read this screen as a block and do not read it as a pass — try again by all
+              means, but shipping on the strength of it would be shipping on no information.
             </Note>
             <Failed which="The gate’s answer" notice={gate.error} onRetry={gate.reload} />
           </div>
@@ -228,8 +240,8 @@ function GateResult({ release }: { release: string }) {
       </Panel>
 
       {/* ── the error-budget caveat, on the gate's own page ──────────────────────────────── */}
-      <Panel title="What this verdict does not cover" reads="GET /v1/slos">
-        {objectives.state === 'loading' && <Loading label="Reading the registered objectives" />}
+      <Panel title="What this verdict leaves out" reads="GET /v1/slos">
+        {objectives.state === 'loading' && <Loading label="Asking Beacon which objectives are set" />}
         {objectives.state === 'failed' && objectives.error && (
           <>
             <Note tone="warn">{budget.sentence}</Note>
@@ -247,10 +259,11 @@ function GateResult({ release }: { release: string }) {
             <p className="bw-caveat__aside">
               The reason list above{' '}
               {budget.reasonsMentionedBudgets
-                ? 'does carry an error-budget code, which contradicts this and should be reported.'
-                : 'carries no error-budget code — which on its own means nothing, because that is ' +
-                  'also what an intact budget looks like. Only the empty objectives list can tell ' +
-                  'the two apart.'}
+                ? 'does carry an error-budget code, which cannot be true alongside this. Report ' +
+                  'it — one of the two is wrong.'
+                : 'names no error-budget code, and on its own that tells you nothing: a budget ' +
+                  'with room to spare produces the same silence. The empty objectives table is ' +
+                  'the only thing that separates the two.'}
             </p>
           </div>
         )}
@@ -258,8 +271,8 @@ function GateResult({ release }: { release: string }) {
       </Panel>
 
       {/* ── the recorded history ─────────────────────────────────────────────────────────── */}
-      <Panel title="Recorded decisions" reads={`GET /v1/gate/history?release=${release}`}>
-        {history.state === 'loading' && <Loading label="Reading the recorded decisions" />}
+      <Panel title="Decisions already on the record" reads={`GET /v1/gate/history?release=${release}`}>
+        {history.state === 'loading' && <Loading label="Asking Beacon what was decided before" />}
         {history.state === 'failed' && history.error && (
           <Failed
             which="The recorded decisions"
@@ -269,11 +282,12 @@ function GateResult({ release }: { release: string }) {
         )}
         {history.state === 'empty' && (
           <Empty
-            title="Nothing has been recorded for this release"
+            title="No decision has been written down for this release"
             meaning={
-              'Only a real promotion records a decision — POST /v1/gate, from the pipeline. An ' +
-              'empty history means nobody has tried to promote this tag, not that the gate has ' +
-              'never been asked about it. This page has asked it and recorded nothing, by design.'
+              'A decision goes on the record only when a promotion is genuinely attempted, which ' +
+              'the pipeline does through POST /v1/gate. So an empty list means nobody has tried ' +
+              'to ship this tag — not that the gate has never looked at it. This console has ' +
+              'asked, repeatedly if you have reloaded, and deliberately left no trace.'
             }
           />
         )}
@@ -288,8 +302,8 @@ function GateResult({ release }: { release: string }) {
                 <When iso={decision.decidedAt} />
                 <span className="bw-history__count">
                   {decision.reasons.length === 0
-                    ? 'nothing blocked'
-                    : `${String(decision.reasons.length)} reason(s) recorded`}
+                    ? 'nothing stood in the way'
+                    : `${String(decision.reasons.length)} reason(s) on the record`}
                 </span>
               </li>
             ))}
@@ -330,10 +344,10 @@ function GateVerdict({
           <Fact label="Decision">
             <code className="cf-num bw-code">{answer.decision}</code>
           </Fact>
-          <Fact label="Indeterminate">
+          <Fact label="Anything unmeasured">
             <code className="cf-num bw-code">{String(answer.indeterminate)}</code>
           </Fact>
-          <Fact label="Blocking reasons">
+          <Fact label="Reasons to say no">
             <span className="cf-num">{String(answer.reasons.length)}</span>
           </Fact>
         </dl>
@@ -341,24 +355,26 @@ function GateVerdict({
 
       {odd.length > 0 && (
         <Note tone="stop">
-          <strong>This answer contradicts itself.</strong>{' '}
-          {odd.join(' ')} The page has shown the most cautious reading; report this.
+          <strong>This answer cannot all be true at once.</strong> {odd.join(' ')} What you see
+          above is the most cautious reading of it. Please report it — one part of Beacon’s reply
+          disagrees with another.
         </Note>
       )}
 
       {mismatched.length > 0 && (
         <Note tone="stop">
-          <strong>Beacon classified a reason differently from this page.</strong> The service’s
-          classification is the one shown below.{' '}
-          {mismatched.map((r) => r.code).join(', ')} — report this, because it means a reason code
-          was added to the gate and not to this bundle.
+          <strong>This console and Beacon disagree about what kind of blocker this is.</strong>{' '}
+          Beacon’s own classification is the one drawn below, because it is the one the pipeline
+          acts on. {mismatched.map((r) => r.code).join(', ')} — worth reporting: it usually means a
+          reason code reached the gate before it reached this console.
         </Note>
       )}
 
       {answer.reasons.length === 0 && (
         <Note>
-          Nothing blocked. Note what that does and does not mean: the gate reports every reason it
-          FOUND, and a check it never ran produces no reason at all. See the panel below.
+          Not one reason came back. Be precise about what that buys you: the gate lists what it
+          FOUND, and a check that never ran contributes nothing to that list. An absent reason and a
+          satisfied one look the same from here. The panel below says which you are looking at.
         </Note>
       )}
 
@@ -374,14 +390,13 @@ function GateVerdict({
 
       {answer.waived.length > 0 && (
         <section className="bw-reasons bw-reasons--waived">
-          <h3 className="bw-reasons__title">Waived by an override</h3>
+          <h3 className="bw-reasons__title">Waived, and still true</h3>
           <p className="bw-reasons__lead">
-            Somebody with break-glass accepted these, and their name and written reason are on the
-            record. An override expires within twelve hours and cannot be made permanent
-            (<code className="cf-num bw-code">MAX_OVERRIDE_TTL_MS</code>,{' '}
-            <code className="cf-num bw-code">beacon/src/gate.ts</code>). This console shows
-            overrides and does not create them — see the header of{' '}
-            <code className="cf-num bw-code">src/lib/beacon.ts</code> for why.
+            These blockers have not gone away. Somebody with break-glass looked at each one, chose
+            to accept it, and left their name and their reasoning attached. Every waiver runs out
+            within twelve hours and none can be made permanent, so this list shrinks on its own and
+            the underlying problems come back with it. Waivers are made through Beacon’s admin route
+            or its command line; this console shows them and cannot create one.
           </p>
           <ul className="bw-reasons__list">
             {answer.waived.map((reason, index) => (

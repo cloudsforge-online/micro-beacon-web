@@ -14,8 +14,33 @@
  *
  *   surfaces   --cf-bg, --cf-bg-raised, --cf-surface, --cf-line, --cf-line-strong
  *   text       --cf-fg, --cf-fg-dim, --cf-fg-mute
- *   states     --cf-viz-good, --cf-viz-warn, --cf-viz-crit  (the RESERVED three)
+ *   states     --cf-viz-good, --cf-viz-warn, --cf-viz-crit  (the RESERVED three, as MARKS)
+ *              --cf-good-text, --cf-warn-text, --cf-critical-text  (the same three, as TYPE)
  *   spacing    --cf-space-*, --cf-radius*, --cf-text-*
+ *
+ * ── THE STATE COLOURS FORK BY JOB, AND THE FORK IS MEASURED RATHER THAN STYLISTIC ─────────────
+ *
+ * There are two families here where there used to be one, and reaching for the wrong one is a
+ * contrast defect rather than a preference. `--cf-viz-*` is validated against the 3:1 NON-TEXT
+ * floor, which is the right floor for a panel's left border, a table cell's edge and a chart mark.
+ * `--cf-*-text` is the 4.5:1 step of the same colour, derived in linear light so the hue is
+ * unchanged, and it is the only one of the two that may appear after `color:`.
+ *
+ * On the DARK scheme two of the three pairs are the same value, which is exactly why this was easy
+ * to get wrong and stayed wrong: good and warn clear 4.5:1 unaided, so nothing looked amiss. The
+ * third does not — `--cf-critical` measures 3.38:1 on the tightest ground this system composes
+ * text on (`ui/packages/ui/src/tokens.css`), so the word "stop", on the surface whose
+ * whole job is to say it, has been under the AA floor for as long as it has shipped.
+ *
+ * On the LIGHT scheme, which `data-cf-scheme="auto"` in index.html has just made reachable, all
+ * three fork: `tokens.css` re-tunes `--cf-viz-good` and `--cf-viz-warn` for marks while
+ * `tokens.css` gives the text steps their own, darker values. So a rule that used the
+ * mark token as type would have been below the floor for every verdict rather than one.
+ *
+ * The split runs through this file as: `color:` is a `-text` token, `border-color:`,
+ * `border-left-color:` and `outline:` are `--cf-viz-*`. `.bw-badge` is the one place they meet —
+ * it draws its border in `currentColor`, so the border follows the text step, which is a colour
+ * that clears the border's own floor with room to spare.
  *
  * ── AND `--cf-accent` APPEARS NOWHERE IN A VERDICT RULE, WHICH IS THE POINT ────────────────────
  *
@@ -58,26 +83,43 @@ body {
   background: var(--cf-bg);
   color: var(--cf-fg);
   font-family: var(--cf-font-sans);
-  /* The bar is dark on every surface; the page follows the substrate. */
-  color-scheme: dark;
 }
+
+/*
+ * ── `color-scheme: dark` USED TO BE THE LAST LINE OF THAT RULE, AND IT HAD TO GO ──────────────
+ *
+ * It said "the bar is dark on every surface; the page follows the substrate", which was true when
+ * this surface had one appearance. index.html now sets `data-cf-scheme="auto"`, and the token
+ * layer resolves the whole palette — page, panels, type, the three verdict hues — from the
+ * reader's operating system. A `color-scheme: dark` on `<body>` does not participate in that
+ * resolution; it tells the BROWSER which form controls and scrollbars to draw, and it would have
+ * gone on saying "dark" while every colour around it turned light.
+ *
+ * The visible cost of leaving it would have been the release-tag input on the gate page: a dark
+ * field with a dark caret, on a light panel, in the one control this console exists to be typed
+ * into. `micro-foresight-web` shipped exactly that on its stake panels, from the mirror-image
+ * defect — an inert `colour-scheme` meta tag that no browser ever read.
+ *
+ * The declaration is not moved, it is DELETED. Its replacement is `<meta name="color-scheme"
+ * content="dark light">` in index.html, which is the document-level form of the same thing and is
+ * the one place it can be stated once for the whole page.
+ */
 
 /* ---- layout ---------------------------------------------------------- */
 
-.bw-skip {
-  position: absolute;
-  left: -9999px;
-}
-.bw-skip:focus {
-  left: var(--cf-space-md);
-  top: var(--cf-space-md);
-  z-index: 100;
-  padding: var(--cf-space-xs) var(--cf-space-sm);
-  background: var(--cf-bg-raised);
-  color: var(--cf-fg);
-  border: 1px solid var(--cf-accent);
-  border-radius: var(--cf-radius-sm);
-}
+/*
+ * `.bw-skip` USED TO BE DECLARED HERE. It is gone with the anchor it styled: the shell now renders
+ * `<SkipLink>` from @cloudsforge/ui, which brings `.cf-skip` from `ui.css` and is the
+ * half of the pattern that was never wrong. What WAS wrong was the target — a `<main id="main">`
+ * with no `tabIndex={-1}`, so following the link scrolled the page and left focus behind — and
+ * that is fixed by `MainRegion`, not by a stylesheet. See the note in src/components/shell.tsx.
+ *
+ * The shared rule is also better than the local one in a way worth recording, because it is the
+ * reason not to reintroduce a local override: `.bw-skip` hid itself at `left: -9999px`, which
+ * works, and `.cf-skip` slides in with a transform, which keeps the element in the layout and in
+ * the accessibility tree at all times. An off-canvas position is a box the browser may decide not
+ * to lay out at all; a transform is not.
+ */
 
 .bw-subnav {
   position: sticky;
@@ -226,15 +268,27 @@ body {
   font-size: var(--cf-text-xl);
   padding: var(--cf-space-xs) var(--cf-space-sm);
 }
-/* The reserved three, and a fourth that is deliberately NOT one of them. */
+/*
+ * The reserved three, and a fourth that is deliberately NOT one of them.
+ *
+ * THE TEXT STEPS, NOT THE MARK STEPS, and on this rule the distinction is load-bearing twice over.
+ * A badge is a WORD — that is its whole design, three channels with the word carrying the meaning
+ * — so `color:` here is type, and type is held to 4.5:1. `--cf-viz-crit` is validated at 3:1 and
+ * measures 3.38:1 against the ground below it, so `.bw-badge--stop` has been rendering the estate's
+ * most consequential word under the AA floor. The border follows, because `.bw-badge` above draws
+ * it in `currentColor`; a 4.5:1 colour clears the border's own 3:1 floor, so the pair is correct in
+ * both roles from one declaration.
+ *
+ * See the header of this file for the measurements and for why the two families exist at all.
+ */
 .bw-badge--clear {
-  color: var(--cf-viz-good);
+  color: var(--cf-good-text);
 }
 .bw-badge--caution {
-  color: var(--cf-viz-warn);
+  color: var(--cf-warn-text);
 }
 .bw-badge--stop {
-  color: var(--cf-viz-crit);
+  color: var(--cf-critical-text);
 }
 /*
  * `unknown` is drawn in the muted foreground and NOT in any status hue, and that is a decision.
@@ -529,8 +583,10 @@ body {
   color: var(--cf-fg);
   border-color: var(--cf-fg-mute);
 }
+/* The two roles, side by side and deliberately not the same token: the word is type and takes the
+   4.5:1 step, the box around it is a mark and takes the 3:1 one. */
 .bw-tag--muted {
-  color: var(--cf-viz-warn);
+  color: var(--cf-warn-text);
   border-color: var(--cf-viz-warn);
 }
 
@@ -642,19 +698,23 @@ body {
 .bw-state__links a {
   color: var(--cf-accent-text);
 }
+/* Same split again: the panel's edge is a mark, the glyph inside it is a character the browser
+   renders with the type pipeline and is held to the type floor. The glyph is `aria-hidden` and the
+   heading beside it carries the meaning, so nothing here depends on colour alone — but a reader
+   who CAN see it should be able to, and 3.38:1 on a 2xl glyph is the state this closes. */
 .bw-state--failed {
   border-style: solid;
   border-color: var(--cf-viz-crit);
 }
 .bw-state--failed .bw-state__icon {
-  color: var(--cf-viz-crit);
+  color: var(--cf-critical-text);
 }
 .bw-state--invalid {
   border-style: solid;
   border-color: var(--cf-viz-warn);
 }
 .bw-state--invalid .bw-state__icon {
-  color: var(--cf-viz-warn);
+  color: var(--cf-warn-text);
 }
 
 .bw-spinner {
@@ -691,8 +751,18 @@ body {
 }
 .bw-signin__glyph {
   font-size: var(--cf-text-3xl);
-  /* Chrome, not a verdict. This is the surface identifying itself. */
-  color: var(--cf-accent);
+  /* Chrome, not a verdict. This is the surface identifying itself — the accent is correct here in
+     a way it never is on a badge.
+
+     `--cf-accent-text` and not `--cf-accent`, for the reason recorded at `tokens.css`: the
+     accents are validated at 3:1 against the raised panel, which is the floor for a border or a
+     fill, and `grep -n 'cf-accent' ui.css` finds no `color:` at all in the design system itself.
+     Consumers reached for it as type because there was nothing else to reach for, and that is what
+     the `-text` step exists to end. Beacon's is the one accent where the two happen to be the same
+     value on the dark scheme (`tokens.css` — it already clears at 5.41:1); on the LIGHT scheme
+     they are not (`tokens.css`), so naming the right one is what makes `data-cf-scheme="auto"`
+     safe here rather than merely quiet. */
+  color: var(--cf-accent-text);
 }
 .bw-signin__title {
   margin: 0;

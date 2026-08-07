@@ -76,8 +76,8 @@ describe('the live refusal is rendered as an answer, not as a failure', () => {
     assert.notEqual(indeterminate.word, determinate.word)
     assert.notEqual(indeterminate.glyph, determinate.glyph)
     assert.notEqual(indeterminate.tone, determinate.tone)
-    assert.match(indeterminate.word, /nobody knows/i)
-    assert.match(indeterminate.meaning, /an unknown is not a pass/i)
+    assert.match(indeterminate.word, /never measured/i)
+    assert.match(indeterminate.meaning, /the gate shuts when it cannot see/i)
   })
 
   it('never gives a refusal the clear tone, whatever else changes', () => {
@@ -105,7 +105,7 @@ describe('an answer that contradicts itself is reported, never quietly resolved'
     const bad: GateAnswer = { ...LIVE, indeterminate: true, promote: true, decision: 'promote' }
     const found = contradictions(bad)
     assert.ok(found.length >= 1)
-    assert.ok(found.some((s) => /indeterminate/i.test(s)))
+    assert.ok(found.some((s) => /unmeasured/i.test(s)))
     // And the rendered verdict takes the cautious reading rather than the cheerful one.
     assert.equal(verdictVoice(bad).tone, 'unknown')
   })
@@ -119,7 +119,7 @@ describe('an answer that contradicts itself is reported, never quietly resolved'
       reasons: [],
       waived: [LIVE.reasons[0] as GateReason],
     }
-    assert.ok(contradictions(bad).some((s) => /plain promote/i.test(s)))
+    assert.ok(contradictions(bad).some((s) => /clean promotion/i.test(s)))
   })
 
   it('catches a reason whose determinacy disagrees with its code', () => {
@@ -149,8 +149,8 @@ describe('"the gate refused" and "we could not ask the gate" are different facts
       assert.notEqual(unreachable.glyph, verdict.glyph)
     }
     // The wording must not be readable as a block either.
-    assert.match(unreachable.word, /never asked/i)
-    assert.match(unreachable.meaning, /nothing here says anything about|not a verdict/i)
+    assert.match(unreachable.word, /no answer came back/i)
+    assert.match(unreachable.meaning, /no verdict to show you|says nothing at all/i)
   })
 
   it('says that a verifier outage is identity failing rather than a verdict', () => {
@@ -161,7 +161,7 @@ describe('"the gate refused" and "we could not ask the gate" are different facts
       status: 503,
     })
     assert.match(voice.meaning, /identity/i)
-    assert.match(voice.meaning, /not a verdict/i)
+    assert.match(voice.meaning, /says nothing at all about this release/i)
   })
 })
 

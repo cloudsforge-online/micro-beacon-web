@@ -197,6 +197,73 @@ an og card for Admin, Lantern and Beacon — so `index.html` carries no `og:` bl
 pointing at a file that does not exist. `test/brand-chrome.test.ts` asserts both absences in both
 directions.
 
+## The 1.1 design system, and the four defects adopting it closed
+
+`@cloudsforge/ui` 1.1 added a light scheme, a consent layer, a shared skip link and a registry-derived
+head. Applying it here was mostly not restyling.
+
+**`data-cf-scheme="auto"`.** The third attribute on `<html>`, set statically beside the other two so
+the page cannot paint in one scheme and change. A reader whose system says light now gets a light
+page instead of fighting a dark one.
+
+**The state colours forked by job, and one of them was under the floor.** `--cf-viz-good/warn/crit`
+are validated against the **3:1 non-text** floor — right for a panel's border, a table edge, a chart
+mark. `--cf-good-text` / `--cf-warn-text` / `--cf-critical-text` are the **4.5:1** steps of the same
+colours. `--cf-critical` measures **3.38:1**, so `.bw-badge--stop` — the word *stop*, on the surface
+whose whole job is to say it — has been below AA since it shipped. On the light scheme all three
+fork, so `auto` without this change would have put every verdict under the floor rather than one.
+The rule through `src/styles.css` is now: `color:` is a `-text` token, `border-color:` and
+`outline:` are `--cf-viz-*`.
+
+**The skip link now works.** This app had one — a `.bw-skip` anchor at `#main` — and it was half the
+pattern: `<main id="main">` carried no `tabIndex={-1}`, so in Chrome and Safari following the link
+scrolled the page, left focus on the link, and sent the next Tab back into the company bar.
+`SkipLink` + `MainRegion` set the href, the id and the tabindex from one constant. Driven in a real
+browser, not read: Tab, Enter, and assert focus is inside the landmark.
+
+**`color-scheme: dark` on `<body>` was deleted, not moved.** It told the browser which form controls
+to draw and would have gone on saying *dark* while the page around it turned light — a dark field
+with a dark caret on a light panel, in the one control this console exists to be typed into. Its
+replacement is `<meta name="color-scheme" content="dark light">` in the document head.
+
+**A per-address head.** `DocumentMeta` in the shell applies `surfaceMeta('beacon', …)` on every
+navigation, with the page name read off `ROUTES`. It also settled a disagreement nothing had put
+side by side: `index.html` said `Beacon — release gate`, the runtime layer composes
+`Release gate — Beacon`. The shell now states the derived form, and `test/sitemap.test.ts` generates
+the expectation rather than retyping it.
+
+## Crawlers, and why there is no sitemap
+
+**This surface refuses every crawler on every environment, and publishes no sitemap at all.**
+
+Derived, not decided here: `robotsDirective()` (`ui/packages/ui/src/seo.ts`) reads `servesUi`
+and `adminOnly` and nothing else, and `beacon` carries `adminOnly: true`
+(`ui/packages/ui/src/surfaces.ts`), so the directive is `noindex, nofollow`. Three layers state
+it and a test proves they agree: `nginx.conf`'s `/robots.txt`, the static meta tag, and the runtime
+one.
+
+`/robots.txt` answers `Disallow: /` **unconditionally** — not, as on every public surface, only away
+from mainnet — and names **no `Sitemap:` line**. The `Sitemap` directive is independent of the
+user-agent groups above it, so a crawler obeying the disallow may still fetch a sitemap named beside
+it; a line there would hand over the exact addresses the disallow withholds. `/sitemap.xml` answers
+404, and this surface is absent from the estate sitemap too — `SITEMAP_SURFACES`
+(`ui/packages/ui/src/sitemap.ts`) filters `adminOnly` rows out, so `site` already omits it.
+
+Hiding is not the security boundary — `authorise()` verifies a token on every `/v1` route. It is that
+a search result *confirms* the console exists and gives its address, and nobody arrives at a release
+gate from a search engine.
+
+Driven against a real nginx on the apex-style host and both testnet shapes: `/robots.txt` → `200
+text/plain`, body byte-identical to `robotsTxt({ indexable: false })`; `/sitemap.xml` → `404
+text/html`; every declared route still `200`, `/objectives/deeper` and `/nope` still `404`, `/v1/gate`
+still the plain-text refusal.
+
+**And there is no analytics tag.** `index.html` carries no `<meta name="cf-analytics">`, so
+`analyticsId()` returns null, `<CookieBanner />` renders nothing and `initAnalytics()` primes denied
+defaults for a tag that never arrives. GA4 reports `page_location`; a hit from an operator console
+would ship the estate's own addresses to a third party through a different door than the one the
+robots directive closed. Verified in a browser: zero cookies and zero third-party requests on load.
+
 ## Configuration
 
 **There is none.** No `.env`, no `define`, no `envPrefix`, no `VITE_` anything. Every host resolves at

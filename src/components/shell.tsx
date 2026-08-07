@@ -16,10 +16,18 @@
  * `brand/plan.ts` also rules out an og card for this surface, which is why index.html carries no
  * `og:` block.
  */
-import { CloudsForgeBar, CloudsForgeFooter } from '@cloudsforge/ui'
-import { NavLink, Outlet } from 'react-router-dom'
+import { useEffect } from 'react'
+import {
+  CloudsForgeBar,
+  CloudsForgeFooter,
+  CookieBanner,
+  MainRegion,
+  SkipLink,
+} from '@cloudsforge/ui'
+import { applyHead, surfaceMeta } from '@cloudsforge/ui/seo'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { PRODUCT } from '../lib/hosts.ts'
-import { NAV } from '../lib/routes.ts'
+import { NAV, ROUTES } from '../lib/routes.ts'
 import { useSession } from '../lib/auth.tsx'
 
 export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
@@ -27,11 +35,25 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
 
   return (
     <>
-      {/* Skip link first in the DOM: the gate page is a long list of reasons and a keyboard user
-          should not have to tab the navigation to reach it. */}
-      <a className="bw-skip" href="#main">
-        Skip to the page
-      </a>
+      {/*
+        Skip link first in the DOM: the gate page is a long list of reasons and a keyboard user
+        should not have to tab the navigation to reach it.
+
+        IT IS NOW THE SHARED ONE, AND THE LOCAL VERSION IT REPLACES WAS HALF A PATTERN. This file
+        wrote its own `.bw-skip` anchor pointing at `#main`, and the `<main id="main">` it pointed
+        at carried no `tabIndex={-1}` — so in Chrome and Safari following the link scrolled the
+        page, left focus on the link itself, and sent the next Tab back into the company bar. The
+        reader arrives looking at the content and tabbing through the chrome, which is the exact
+        state the link exists to prevent, and it is invisible to everyone who does not use it.
+
+        `SkipLink` and `MainRegion` set the href and the pair `id` + `tabIndex` from ONE constant
+        (`MAIN_ID`, `ui/packages/ui/src/index.tsx`), so the two halves cannot disagree again.
+        The id is `cf-main` now rather than `main`. Grepped rather than assumed: two things named
+        the old one — the anchor being deleted with it, and `assertSkipLink`'s default target in
+        test/journeys/axe.ts, which now reads `MAIN_ID` instead of spelling a landmark's name for a
+        fourth time. It had never been called, so it would have gone wrong for the first caller.
+      */}
+      <SkipLink>Skip to the page</SkipLink>
       <CloudsForgeBar
         current={PRODUCT}
         account={account}
@@ -56,7 +78,14 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
           ))}
         </div>
       </nav>
-      <main className="bw-main" id="main">
+      <DocumentMeta />
+      {/*
+        `MainRegion` rather than a hand-written `<main>`: it sets `id={MAIN_ID}` and `tabIndex={-1}`
+        together, which is the pair the skip link above needs and the pair this file used to get
+        half right. `className` is still this bundle's own — the layout is local, the landmark is
+        shared.
+      */}
+      <MainRegion className="bw-main">
         {/*
           An unregistered placement is closer to a refusal here than it is on a public surface, and
           the notice says both halves of why.
@@ -85,7 +114,7 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
           </p>
         )}
         <Outlet />
-      </main>
+      </MainRegion>
 
       {/*
         The company footer, from @cloudsforge/ui, and NEVER a local copy. Every link is derived from
@@ -121,6 +150,91 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
           </>
         }
       />
+
+      {/*
+        Last in the document, and therefore last in the tab order. That is deliberate: the banner is
+        a dialog and is explicitly NOT modal, so an operator who came here to read why a release was
+        refused can read it and answer afterwards. A consent banner that traps focus is the coercion
+        the regulation is about.
+
+        ON THIS SURFACE IT RENDERS NOTHING, TODAY AND ON PURPOSE. `CookieBanner` returns null when
+        `analyticsId()` is null (`ui/packages/ui/src/index.tsx`), and it is null here because
+        index.html carries no `<meta name="cf-analytics">` — see the long note where that tag would
+        have gone, which comes down to `beacon` being `adminOnly: true` (`surfaces.ts`): GA4
+        reports `page_location`, so a hit from an operator console ships the estate's own addresses
+        to a third party.
+
+        Mounting it anyway costs one component that returns null, and buys the property that the
+        shell is the same shape as every other surface's. The failure this prevents is the one where
+        somebody adds the meta tag — which would need that note argued with first — and the gate is
+        not already in front of it.
+      */}
+      <CookieBanner />
     </>
   )
+}
+
+/**
+ * Keep `document.title`, the description, the robots directive, the Open Graph tags and the
+ * canonical link in step with the address.
+ *
+ * A component in the shell rather than a hook each page calls, because the failure mode of the
+ * second shape is the page that forgets to call it — and the page that forgets is the one added
+ * last, which is the one nobody has bookmarked and therefore the one nobody notices is titled with
+ * the previous page's title. On this surface that is worse than cosmetic: an operator keeps six
+ * tabs open on the same console, and the tab strip is the only thing telling them apart.
+ *
+ * ── What this does NOT replace ────────────────────────────────────────────────────────────────
+ *
+ * The static tags in `index.html`. Those are what a fetcher that does not execute JavaScript gets,
+ * and this is the layer a browser sees. The trade is inherited rather than introduced; it is
+ * written down at the top of `@cloudsforge/ui/seo` so the next person makes it deliberately.
+ *
+ * ── Where the words come from ─────────────────────────────────────────────────────────────────
+ *
+ * `surfaceMeta('beacon', …)` derives the name and the description from the surface registry, which
+ * already holds both. The only thing this file adds is which page you are on, and that is read off
+ * `ROUTES` — the same declaration the sub-navigation, the router and nginx's enumerated locations
+ * are derived from — rather than typed a fifth time. An address `ROUTES` does not know is the 404
+ * page, and it gets the surface name alone: the shell cannot say what a mistyped address was for.
+ *
+ * ── The robots directive is DERIVED, and there is no override here ────────────────────────────
+ *
+ * `robotsDirective()` (`ui/packages/ui/src/seo.ts`) reads `servesUi` and `adminOnly` and
+ * nothing else, and `beacon` carries `adminOnly: true` (`ui/packages/ui/src/surfaces.ts`), so
+ * every page here resolves to `noindex, nofollow` — which is the same string index.html states
+ * statically. `test/sitemap.test.ts` asserts the two agree by CALLING `surfaceMeta` rather than by
+ * retyping it, so a registry row that stopped being `adminOnly` would go red here instead of
+ * quietly leaving a console asking not to be indexed for a reason nobody had recorded.
+ *
+ * ── The one tag this emits that this surface cannot honour ────────────────────────────────────
+ *
+ * `og:image` and `twitter:image`, which `metaTags` composes from `DEFAULT_OG_IMAGE` —
+ * `/og-1200x630.png` — and this surface deliberately ships no such file: `brand/plan.ts` says
+ * "No OG card and no social banner for Admin, Lantern or Beacon", and `test/brand-chrome.test.ts`
+ * asserts the absence in both directions.
+ *
+ * It is left as it is rather than stripped, and that is a decision. The only reader of those two
+ * tags is a client that executes JavaScript AND ignores the `noindex, nofollow` written beside
+ * them — the link-preview fetchers that would actually fetch the card do not run scripts, and get
+ * index.html, which carries no `og:` block at all and never will. Deleting the tags after
+ * `applyHead` wrote them would mean this repository disagreeing locally with the shared module,
+ * which is the per-surface divergence the module exists to end; and the day `brand/plan.ts` gives
+ * Beacon a card, `public/og-1200x630.png` appears and these tags become correct with no edit here.
+ */
+function DocumentMeta() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    // The first path segment, which is what `ROUTES.path` holds: `''` for the index, `journeys`
+    // for `/journeys`. Nothing on this surface has children, so one segment is the whole key.
+    const segment = pathname.split('/')[1] ?? ''
+    const label = ROUTES.find((route) => route.path === segment)?.label ?? null
+    applyHead(
+      surfaceMeta(PRODUCT, { ...(label === null ? {} : { title: label }), path: pathname }),
+      window.location.origin,
+    )
+  }, [pathname])
+
+  return null
 }

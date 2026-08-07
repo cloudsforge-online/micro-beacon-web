@@ -93,7 +93,7 @@ export function When({ iso, now = Date.now() }: { iso: string | null; now?: numb
 
 /** A coarse age. Deliberately coarse: a precise one invites reading it as a measurement. */
 export function ageOf(ms: number): string {
-  if (ms < 0) return 'in the future'
+  if (ms < 0) return 'dated ahead of now'
   const seconds = Math.round(ms / 1000)
   if (seconds < 90) return `${String(seconds)}s ago`
   const minutes = Math.round(seconds / 60)

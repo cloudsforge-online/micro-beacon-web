@@ -28,18 +28,97 @@
   cool hue; `tokens.css` records that the estate's own reading of the two ramps was made on
   surfaces that set "cool" and on none that set "warm", so this is the one that has had less use
   and it is chosen on the token file's own terms rather than by copying the template.
+
+  data-cf-scheme is the third of the three, added with @cloudsforge/ui 1.1
+  (`ui/packages/ui/src/tokens.css`). `auto` follows the reader's operating system;
+  `light` and `dark` force one. It is set here, statically, for the same reason the other two are —
+  a page that paints before the attribute lands flashes the default and then changes colour, and a
+  theme flash is worse than a theme nobody asked for.
+
+  `auto` and not `dark`, on a surface that was built and reviewed dark, because the light ramp is
+  now measured rather than guessed: `tokens.css` records that `--cf-viz-good` and
+  `--cf-viz-warn` are RE-TUNED for the light scheme while `--cf-viz-crit` deliberately is not — it
+  measures 3.95:1 on the light panel unaided — so the three reserved verdict hues survive the
+  switch with their meanings intact. That is the only property this surface could not have
+  afforded to lose, and it is the one the design system checked.
+
+  WHAT THE LIGHT RAMP DOES NOT SURVIVE IS THE VERDICT AS **TYPE**, and that is what changed in
+  src/styles.css alongside this attribute. The `--cf-viz-*` trio is measured against the 3:1
+  NON-TEXT floor, which is the right floor for the border of a panel and the wrong one for a word:
+  on the light scheme `--cf-viz-good` becomes `#6d964f` (`tokens.css`) while the text step
+  `--cf-good-text` becomes `#4b6935` at 4.59:1 (`tokens.css`), and the same fork happens
+  for warn and critical. So every `color:` in this bundle that named a verdict now names the
+  `-text` step and every `border-color:` still names the `--cf-viz-*` one. Turning `auto` on
+  without that change would have shipped a light page whose three most important words were the
+  three below the AA floor.
 -->
-<html lang="en-GB" data-cf-product="beacon" data-cf-substrate="warm">
+<html lang="en-GB" data-cf-product="beacon" data-cf-substrate="warm" data-cf-scheme="auto">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="colour-scheme" content="dark light" />
+    <!--
+      `color-scheme`, AND NOT `colour-scheme`, WHICH IS WHAT THIS LINE SAID UNTIL NOW.
+
+      The estate spells "colour" everywhere else and the reflex followed it into a place where it
+      is not a spelling but an identifier. `color-scheme` is a registered metadata name (CSS Color
+      Adjustment Module Level 1 §2.4); `colour-scheme` is not one, so every browser that has ever
+      loaded this page has parsed the tag, found no name it knows, and dropped it. The content was
+      correct for as long as it has shipped and was read by nothing.
+
+      Nothing visible broke, which is why it survived: this surface was dark-only, and the value
+      this tag carries would only have mattered the moment the page could be light. That moment is
+      this commit. `content="dark light"` is unchanged — dark first, because it is what the design
+      system is and what every panel below was reviewed against, and `light` present because a
+      reader whose system says light now gets a light page (see `data-cf-scheme="auto"` above) and
+      must get the form controls and scrollbars to match.
+
+      The division of labour between the two declarations: this tag tells the BROWSER which control
+      sets it may draw; `data-cf-scheme` on <html> tells @cloudsforge/ui which palette to resolve.
+      Neither substitutes for the other, which is why both are here.
+    -->
+    <meta name="color-scheme" content="dark light" />
     <!--
       The build that produced this bundle. Stamped by the Dockerfile, read by src/lib/obs.ts, and
       the reason an error report can be pinned to the deploy that introduced it. It is an identity
       rather than a configuration: it names the artefact, it does not tell it where it is running.
     -->
     <meta name="cf-release" content="dev" />
+    <!--
+      THERE IS DELIBERATELY NO `<meta name="cf-analytics">` HERE, AND ITS ABSENCE IS THE DECISION.
+
+      Every public surface in the estate carries one: an identity naming a GA4 property, read by
+      `analyticsId()` (`ui/packages/ui/src/consent.ts`) and used by nothing until a reader
+      presses Accept. This surface does not get one, and the reason is the same one that put
+      `noindex, nofollow` below.
+
+      `beacon` is `adminOnly: true` in the registry (`ui/packages/ui/src/surfaces.ts`), and the
+      robots directive exists so that a search index cannot CONFIRM the console is here — a
+      "no information is available for this page" result is still a result, which is why the
+      directive is `nofollow` as well. Sending GA4 hits from these pages would tell Google the same
+      fact through a different door, with the addresses of every operator route attached and a
+      hostname on each one. An operator console's own traffic is not analytics; it is a map.
+
+      THE CONSENT PRIMITIVES ARE STILL WIRED, and that is not a contradiction. `initAnalytics()` in
+      src/main.tsx primes the DENIED defaults and loads nothing, and `<CookieBanner />` in
+      src/components/shell.tsx renders nothing at all, because both ask `analyticsId()` first and
+      it returns null when this tag is absent. They are here so that the day somebody adds the tag —
+      which would need this comment to be argued with first — the gate is already in front of it,
+      rather than being remembered afterwards.
+
+      AND THERE IS NO MEASUREMENT SNIPPET, here or anywhere. A `<script src>` pointing at Google's
+      tag-manager host fetches a third-party script and sets `_ga` on load, before any banner has
+      been drawn let alone answered, and under ePrivacy Art. 5(3) a cookie set before consent is a
+      violation a banner underneath it does not cure. `@cloudsforge/ui/consent` injects the tag from
+      exactly one place: the Accept button. test/sitemap.test.ts greps this file and src/ for the
+      string.
+
+      THE HOSTNAME IS NOT WRITTEN OUT ANYWHERE IN THIS REPOSITORY, INCLUDING HERE. web-ci.yml's
+      `No third-party analytics tag` step greps the raw tree, comments included, and it is right to:
+      a guard that skipped comments would skip the one line of a minified bundle that matters. So
+      the rule is that the forbidden string never appears — not in prose explaining its absence, and
+      not in the tests that prove it. Those assemble it from fragments at runtime.
+    -->
+
     <!--
       The three favicons from `brand/assets/beacon/`. There is NO og card and no `og:` meta block
       here, and the absence is read off the brand plan rather than forgotten: `brand/plan.ts` —
@@ -52,11 +131,53 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="/favicon-192x192.png" />
 
-    <!-- Not indexed, and this one is not decoration either: every route here is admin-only and
-         every panel is an operational fact about a live estate. -->
+    <!--
+      Not indexed, and this one is not decoration either: every route here is admin-only and every
+      panel is an operational fact about a live estate.
+
+      THIS STRING IS NOW DERIVED AS WELL AS WRITTEN, AND THE TWO HAVE TO AGREE. `DocumentMeta` in
+      src/components/shell.tsx applies `surfaceMeta('beacon', …)` on every navigation, and
+      `robotsDirective()` (`ui/packages/ui/src/seo.ts`) reads `servesUi` and `adminOnly`
+      and nothing else. `beacon` carries `adminOnly: true` (`ui/packages/ui/src/surfaces.ts`),
+      so the runtime value is `noindex, nofollow` — the same seven characters plus nine, produced
+      from the registry rather than from this line.
+
+      There is deliberately NO local `robots:` override passed at the call site. An override would
+      make this tag the decision, and the decision belongs to the registry row: the day `beacon`
+      stopped being `adminOnly` — which is a change somebody would have to argue for in
+      `surfaces.ts` — this page would have gone on asking not to be indexed for no recorded reason.
+      `test/sitemap.test.ts` asserts the two strings are equal, and asserts it by CALLING
+      `surfaceMeta` rather than by retyping the expectation.
+
+      The static tag stays, and is not redundant, because it is what a fetcher that does not
+      execute JavaScript gets — which is most link-preview clients and some crawlers. Runtime
+      metadata is the second layer, not the first.
+    -->
     <meta name="robots" content="noindex, nofollow" />
 
-    <title>Beacon — release gate</title>
+    <!--
+      REVERSED, AND THE REVERSAL IS THE POINT. This read `Beacon — release gate` until now, and
+      `DocumentMeta` composes `Release gate — Beacon` from the registry: `surfaceMeta` is
+      `${page} — ${surface name}` for every page of every surface in the estate
+      (`ui/packages/ui/src/seo.ts`), and the page name comes off `ROUTES` — the same table
+      the sub-navigation and nginx's enumerated locations come from, where the index route is
+      labelled `Release gate` (`src/lib/routes.ts`).
+
+      Two titles for one page in two different word orders is exactly the drift `@cloudsforge/ui/seo`
+      was written to end, and it is the drift that is hardest to notice: the shell's title is what a
+      link preview shows and the runtime one is what the tab shows, so nothing puts them side by
+      side. `site/index.html` carries a comment recording the same defect in its own description,
+      found only when somebody opened the served HTML rather than the page.
+
+      The specific loss it caused here is small and daily. An operator keeps six tabs open on this
+      console; the tab strip truncates from the RIGHT, so `Beacon — rele…` and `Beacon — jour…`
+      begin with the one word all six share. Front-loading the page name is what makes them
+      distinguishable, and it is what every other page here already did.
+
+      test/sitemap.test.ts asserts this string equals `surfaceMeta(PRODUCT, { title: <the index
+      route's label> }).title`, generated rather than retyped, so the two layers cannot part again.
+    -->
+    <title>Release gate — Beacon</title>
   </head>
   <body>
     <div id="root"></div>

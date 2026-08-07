@@ -119,16 +119,35 @@ interface Decision {
  * shell under a 404 — which is precisely the behaviour the real config exists to AVOID, so the
  * model would have been green for a config that had lost the property. `return` is now read with
  * its status, and any code is honoured.
+ *
+ * ── AND TWO MORE SHAPES, ADDED WITH robots.txt AND sitemap.xml ────────────────────────────────
+ *
+ * **A single-quoted body.** `location = /robots.txt` returns one, because its body spans lines and
+ * a double-quoted multi-line literal is the form nginx configs conventionally avoid. Read with
+ * `"` only, that block fell through to `notFound()` and the model answered the app shell under a
+ * 404 for an address the real server answers 200 `text/plain` — the same class of silent
+ * disagreement the note above records, one quote character over.
+ *
+ * **`return <code>;` with NO body at all.** This is a genuinely different directive and not a
+ * degenerate case of the one above: nginx hands a bodyless `return 404;` to `error_page`, so
+ * `location = /sitemap.xml` answers the app shell WITH a 404 status, exactly as an unknown address
+ * does — which is the whole design there, a sitemap that is absent rather than refused. Modelled
+ * by returning null, because null is what routes this to the caller's `notFound()`, and
+ * `notFound()` is what implements `error_page 404 /index.html` in this file.
  */
 function decide(body: string): Decision | null {
-  const ret = /return\s+(\d{3})\s+"([^"]*)"/.exec(body)
+  // `\2` closes on whichever quote opened, so a `'` inside a double-quoted body and vice versa
+  // cannot terminate it early.
+  const ret = /return\s+(\d{3})\s+(["'])([\s\S]*?)\2\s*;/.exec(body)
   if (ret) {
     return {
       kind: 'literal',
       status: Number(ret[1]),
-      text: (ret[2] ?? '').replace(/\\n/g, '\n'),
+      text: (ret[3] ?? '').replace(/\\n/g, '\n'),
     }
   }
+  // Bodyless: `error_page` territory. See the note above.
+  if (/return\s+\d{3}\s*;/.test(body)) return null
   if (/try_files\s+\/index\.html/.test(body)) return { kind: 'shell' }
   if (/try_files\s+\$uri/.test(body)) return { kind: 'file' }
   return null
