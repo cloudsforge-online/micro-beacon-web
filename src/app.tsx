@@ -26,6 +26,7 @@
  * told the address is wrong, not asked to sign in first and then told the address is wrong.
  */
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { ScrollToTop } from './components/scroll-to-top.tsx'
 import { AppShell } from './components/shell.tsx'
 import { AuthProvider, RequiresOperator } from './lib/auth.tsx'
 import { placementIsKnown } from './lib/hosts.ts'
@@ -42,6 +43,7 @@ export function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AuthProvider>
         <Routes>
           <Route element={<AppShell unregistered={unregistered} />}>
