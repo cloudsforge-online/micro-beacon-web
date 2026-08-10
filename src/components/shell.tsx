@@ -24,10 +24,11 @@ import {
   MainRegion,
   SkipLink,
   SubNav,
+  miningOnHub,
 } from '@cloudsforge/ui'
 import { applyHead, surfaceMeta } from '@cloudsforge/ui/seo'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { PRODUCT } from '../lib/hosts.ts'
+import { PRODUCT, hosts } from '../lib/hosts.ts'
 import { NAV, ROUTES } from '../lib/routes.ts'
 import { useSession } from '../lib/auth.tsx'
 
@@ -55,11 +56,31 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
         fourth time. It had never been called, so it would have gone wrong for the first caller.
       */}
       <SkipLink>Skip to the page</SkipLink>
+      {/*
+        `mining` is the design system's own control, sitting immediately left of the account menu
+        on every address this console serves.
+
+        The owner's report was that starting a browser miner is "hidden deep in mining page", and
+        the answer is the one piece of chrome every surface renders. What is passed here is
+        `miningOnHub()` — the `elsewhere` phase — because a session is a WebSocket and two Web
+        Workers on `hub.<apex>`, which is a DIFFERENT ORIGIN from this one. Nothing in this bundle
+        can start, observe or stop a session over there, so what it renders is an ANCHOR to the
+        surface that can rather than a Start button that could only pretend. The same argument the
+        note on the footer makes about deriving links: a destination expressed as an `onClick` is
+        invisible to everything that reads links, cannot be middle-clicked and cannot be opened in
+        a new tab.
+
+        `hosts().hub` and never a written-out URL, for the reason the `unregistered` notice below
+        exists: this bundle is served from localhost, from `beacon.<apex>` and — wrongly, and
+        visibly — from addresses the registry does not know. A literal would be right on exactly
+        one of them.
+      */}
       <CloudsForgeBar
         current={PRODUCT}
         account={account}
         onSignIn={() => signIn()}
         onSignOut={signOut}
+        mining={miningOnHub(hosts().hub)}
       />
       {/*
         The sub-nav is `SubNav` from @cloudsforge/ui and is no longer declared here.
