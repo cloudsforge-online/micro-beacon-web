@@ -655,6 +655,68 @@ describe('the shell a keyboard reader meets', () => {
       await session.close()
     }
   })
+
+  it('renders the SHARED section strip, not a private copy of it', async () => {
+    /*
+     * The assertion that would have caught the defect this repository's copy was censused for.
+     *
+     * Measured 2026-08-10: nine of the ten frontends carrying their own section strip had a
+     * `display: flex` row with neither `white-space: nowrap` nor `overflow-x: auto`, so six
+     * labels on a phone squeezed, broke mid-word, and the ones past the edge could not be
+     * reached at all. This repository's copy was one of the better ones and had both — but the
+     * defect was never that any one copy was wrong, it was that there were ten of them and no
+     * check anywhere could tell whether the strip on screen was the shared one.
+     *
+     * So this reads the DOM rather than the source. `test/tokens.test.ts` asserts that
+     * `.cf-subnav*` exists in ui.css and that `.bw-subnav*` is gone from styles.css; both of
+     * those pass perfectly well against a shell that renders a `<nav>` with no class on it at
+     * all. What is asserted here is that the landmark the reader actually meets carries
+     * `cf-subnav`, and that every section link inside it carries `cf-subnav__link` — which is
+     * what makes the shared stylesheet's scroll behaviour, measure and type apply.
+     */
+    const surface = await startSurface()
+    const session = await renderOnlyWithStubbedNetwork(surface.origin, {
+      path: '/?release=probe-1',
+      stubs: [portal(true), REDEEM, PORTAL_FAVICON, ...READS],
+      apiPrefixes: SERVICE_PREFIXES,
+    })
+    try {
+      await assertMounted(session, { showing: ['estateadmin'] })
+
+      const strip = await session.page.evaluate(() => {
+        const shared = document.querySelector('nav.cf-subnav')
+        const inner = shared?.querySelector('.cf-subnav__inner') ?? null
+        const links = [...(shared?.querySelectorAll('a') ?? [])]
+        return {
+          exists: Boolean(shared),
+          label: shared?.getAttribute('aria-label') ?? null,
+          hasInner: Boolean(inner),
+          linkCount: links.length,
+          // Every anchor in the strip, not just the ones that happen to carry the class: a link
+          // left on the old class name would show up here as a `false`.
+          allShared: links.every((a) => a.classList.contains('cf-subnav__link')),
+          // And the current section is marked with the SHARED modifier rather than `is-active`.
+          current: links.filter((a) => a.classList.contains('cf-subnav__link--current')).length,
+          stale: links.filter((a) => a.classList.contains('is-active')).length,
+          // The private copies would still be in the document if the shell had kept them.
+          privateCopies: document.querySelectorAll('[class*="bw-subnav"]').length,
+        }
+      })
+
+      assert.equal(strip.exists, true, 'no <nav class="cf-subnav"> in the document')
+      assert.equal(strip.hasInner, true, 'the shared strip has no .cf-subnav__inner scroll box')
+      // The wording is this surface's own and was deliberately not homogenised: a document with
+      // two `<nav>`s — the company bar is the other — needs two names a reader can tell apart.
+      assert.equal(strip.label, 'Sections')
+      assert.ok(strip.linkCount >= 2, `the strip rendered ${strip.linkCount} links`)
+      assert.equal(strip.allShared, true, 'a section link is not on the shared class')
+      assert.equal(strip.current, 1, `${strip.current} sections are marked current`)
+      assert.equal(strip.stale, 0, 'a section link still carries the local `is-active` modifier')
+      assert.equal(strip.privateCopies, 0, 'the local .bw-subnav markup is back in the document')
+    } finally {
+      await session.close()
+    }
+  })
 })
 
 describe('the head follows the address', () => {
@@ -681,7 +743,7 @@ describe('the head follows the address', () => {
        * static tag alone. `DocumentMeta` is driven by `useLocation()`, so this is the assertion
        * that it is mounted in the shell rather than in a page that remembered to call it.
        */
-      await session.page.click('.bw-subnav__link[href="/journeys"]')
+      await session.page.click('.cf-subnav__link[href="/journeys"]')
       await session.page.waitForFunction(() => document.title.startsWith('Journeys'), undefined, {
         timeout: 5_000,
       })
