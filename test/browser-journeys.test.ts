@@ -19,7 +19,7 @@
  */
 import assert from 'node:assert/strict'
 import { after, describe, it } from 'node:test'
-import { MAIN_ID, SURFACES } from '@cloudsforge/ui'
+import { HUB_MINE_PATH, MAIN_ID, NOT_PAID_CLAUSE, SURFACES } from '@cloudsforge/ui'
 import { surfaceMeta } from '@cloudsforge/ui/seo'
 import { robotsTxt } from '@cloudsforge/ui/sitemap'
 import { assertLandmarks, assertSkipLink } from './journeys/axe.ts'
@@ -32,6 +32,7 @@ import {
   type Stubs,
 } from './journeys/browser.ts'
 import { startSurface, stopSurface } from './journeys/surface.ts'
+import { hosts } from '../src/lib/hosts.ts'
 import { SERVICE_PREFIXES } from '../src/lib/routes.ts'
 
 /** A session in storage, so the gate lets the page render and the client attaches a bearer. */
@@ -761,6 +762,140 @@ describe('consent, on a surface that measures nothing', () => {
       // And the banner is not on the page, because there is nothing to consent to.
       const banner = await session.page.evaluate(() => document.querySelectorAll('.cf-consent').length)
       assert.equal(banner, 0, 'a consent banner was drawn on a surface that measures nothing')
+    } finally {
+      await session.close()
+    }
+  })
+})
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+ * BROWSER MINING, OFFERED FROM THE BAR
+ *
+ * The owner's report was that starting a browser miner is "hidden deep in mining page, it should
+ * be easily found near the account on all pages". It is in the shared chrome now, so it is on
+ * every address this console serves, and it is asserted HERE — driven, in the built bundle, in
+ * real Chromium — for the reason the block above is: a shell that passes the prop and a bar that
+ * drops it are indistinguishable in source, and position in the tab order is not a fact any
+ * source-reading test can hold.
+ *
+ * What this surface renders is the `elsewhere` phase, which is a LINK. A session is a WebSocket
+ * and two Web Workers on `hub.<apex>`, a different origin; nothing in this bundle can start,
+ * observe or stop one, and the stubbed network in this file could not see it if it did (see the
+ * header). Pressing the session itself belongs to micro-hub-web, which mounts the miner.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * The mining control, its description and its place in the tab order, read off the rendered page.
+ *
+ * The order is COLLECTED in document order rather than driven with `Tab` presses. Adjacency is the
+ * property under test — the control is the last thing before the account, everywhere — and a walk
+ * from the top of the document would spend forty presses proving it and would report "focus never
+ * arrived" for any of a dozen unrelated reasons. `assertSkipLink` above still drives real presses,
+ * which is what keeps this list honest about being a list.
+ *
+ * `tabIndex >= 0` excludes `MainRegion`, which carries `tabindex="-1"` so the skip link can land
+ * focus on it and is deliberately not a tab stop.
+ */
+const READ_MINING = function () {
+  const bar = document.querySelector('.cf-bar')
+  const found = Array.from(bar ? bar.querySelectorAll('.cf-mine') : [])
+  const mine = found[0] as HTMLElement | undefined
+  // The account menu's trigger, found by the handle it shows rather than by `.cf-pop`. The bar
+  // holds TWO dropdowns and the product switcher is the other one — it carries the same class and
+  // it is EARLIER in the document, so `querySelector('.cf-pop > button')` returns the switcher and
+  // the adjacency below would be measured against the wrong control.
+  const account =
+    (Array.from(bar ? bar.querySelectorAll('.cf-pop > button') : []).find((b) =>
+      b.querySelector('.cf-account__handle'),
+    ) as HTMLElement | undefined) ?? null
+  const order = Array.from(
+    document.querySelectorAll<HTMLElement>('a[href], button, input, select, textarea, [tabindex]'),
+  ).filter((el) => el.tabIndex >= 0 && el.getClientRects().length > 0)
+  const describedBy = mine?.getAttribute('aria-describedby') ?? ''
+  const description = describedBy ? document.getElementById(describedBy) : null
+  const from = mine ? order.indexOf(mine) : -1
+  const to = account ? order.indexOf(account) : -1
+  return {
+    hasBar: Boolean(bar),
+    count: found.length,
+    tag: mine?.tagName ?? '',
+    href: mine?.getAttribute('href') ?? '',
+    label: (mine?.textContent ?? '').trim(),
+    hasAccount: Boolean(account),
+    from,
+    to,
+    // What a reader would tab through between the two, so a failure names the thing that moved in
+    // rather than only the distance it added.
+    between:
+      from >= 0 && to > from ? order.slice(from + 1, to).map((el) => (el.textContent ?? '').trim()) : [],
+    describedBy,
+    description: (description?.textContent ?? '').trim(),
+  }
+}
+
+describe('browser mining is offered from the bar, beside the account', () => {
+  it('links an operator to Forge Hub’s miner, immediately before their account, promising nothing', async () => {
+    const surface = await startSurface()
+    const session = await renderOnlyWithStubbedNetwork(surface.origin, {
+      path: '/?release=probe-1',
+      // Signed in through the hand-off rather than by seeding storage, for the reason the footer
+      // scenario gives: the account control this asserts adjacency to only EXISTS as a menu
+      // trigger once a session does, and seeding it would arrange the thing the bundle is
+      // supposed to do for itself.
+      stubs: [portal(true), REDEEM, PORTAL_FAVICON, ...READS],
+      apiPrefixes: SERVICE_PREFIXES,
+    })
+    try {
+      await assertMounted(session, { showing: ['estateadmin'] })
+      const m = await session.page.evaluate(READ_MINING)
+
+      assert.equal(m.hasBar, true, 'this console no longer renders the company bar at all')
+      assert.equal(m.count, 1, `expected one mining control in the bar, found ${m.count}`)
+
+      // ── AN ANCHOR, NOT AN onClick ───────────────────────────────────────────────────────────
+      // A destination expressed as a handler cannot be middle-clicked, cannot be opened in a new
+      // tab, cannot be copied, and is invisible to every check that reads links — which is how
+      // the estate's account entry pointed at the sign-in page on nineteen surfaces without any
+      // of them noticing.
+      assert.equal(m.tag, 'A', `the mining control is a <${m.tag.toLowerCase()}>, not a link`)
+
+      // ── POINTING AT THE SURFACE THAT CAN ACTUALLY MINE ──────────────────────────────────────
+      // Resolved through the registry on both sides of this assertion and written out on neither.
+      // `startSurface` serves the bundle from 127.0.0.1, which `cloudsforgeHosts()` treats as
+      // local — so the page and this process derive the same table, and a literal here would be
+      // correct in CI and wrong on the apex.
+      assert.equal(
+        m.href,
+        `${hosts().hub}${HUB_MINE_PATH}`,
+        'the mining control does not point at Forge Hub’s mining address',
+      )
+
+      // ── AND IT IS BESIDE THE ACCOUNT, WHICH IS THE WHOLE OF THE CHANGE ──────────────────────
+      // Asserted as TAB ORDER rather than as a CSS neighbour: a stylesheet can move a box, and
+      // only document order moves this. The permanent right-hand slot is empty on this surface,
+      // so the account menu's trigger is the very next stop or something was inserted between.
+      assert.equal(m.hasAccount, true, 'the bar renders no account menu for a signed-in operator')
+      assert.equal(
+        m.to - m.from,
+        1,
+        `the mining control is no longer immediately before the account in the tab order; ` +
+          `${m.between.length} stop(s) in between: ${JSON.stringify(m.between)}`,
+      )
+
+      // ── AND IT PROMISES NOTHING THE POOL DOES NOT PAY ───────────────────────────────────────
+      // `pool/src/payouts.ts` derives `payoutsImplemented` and it is false today. The clause is
+      // the design system's exported string rather than a paraphrase this repository would then
+      // own a second copy of.
+      assert.notEqual(m.describedBy, '', 'the mining control carries no description for a reader')
+      assert.ok(
+        m.description.includes(NOT_PAID_CLAUSE),
+        `the mining control does not carry the not-paid clause; it says "${m.description}"`,
+      )
+      // No figure and no currency mark, in the label or in the description. On a console whose
+      // every other reading is a measurement, a number beside the word Mine reads as a rate that
+      // was measured — and nothing here has measured anything.
+      const shown = `${m.label} ${m.description}`
+      assert.doesNotMatch(shown, /[$€£]|\d/, `the mining control shows a figure: "${shown}"`)
     } finally {
       await session.close()
     }
