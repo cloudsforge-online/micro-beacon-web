@@ -121,38 +121,28 @@ body {
  * to lay out at all; a transform is not.
  */
 
-.bw-subnav {
-  position: sticky;
-  /* The bar's own height token, never a number copied out of it. */
-  top: var(--cf-bar-h);
-  z-index: 20;
-  background: var(--cf-bg);
-  border-bottom: 1px solid var(--cf-line);
-}
-.bw-subnav__inner {
-  max-width: var(--cf-max-w);
-  margin: 0 auto;
-  display: flex;
-  gap: var(--cf-space-sm);
-  padding: 0 var(--cf-space-md);
-  overflow-x: auto;
-}
-.bw-subnav__link {
-  padding: var(--cf-space-sm) var(--cf-space-2xs);
-  color: var(--cf-fg-dim);
-  text-decoration: none;
-  font-size: var(--cf-text-sm);
-  white-space: nowrap;
-  border-bottom: 2px solid transparent;
-}
-.bw-subnav__link:hover {
-  color: var(--cf-fg);
-}
-.bw-subnav__link.is-active {
-  color: var(--cf-fg);
-  /* Chrome, not a verdict: the accent is correct here. */
-  border-bottom-color: var(--cf-accent);
-}
+/*
+ * `.bw-subnav`, `.bw-subnav__inner`, `.bw-subnav__link`, `:hover` and `.is-active` USED TO BE
+ * DECLARED HERE. They are gone with the markup they styled: the shell now renders `<SubNav>` from
+ * @cloudsforge/ui, which brings `.cf-subnav*` from `ui.css`.
+ *
+ * The deletion is the point rather than a tidy-up. Measured 2026-08-10, ten frontends carried this
+ * strip under six class prefixes from one original, and the copies had drifted in ways a reader
+ * can see — the full census is in `ui/packages/ui/src/subnav.test.ts`. A private copy left beside
+ * the shared one is how the estate got ten of them in the first place.
+ *
+ * What this copy got RIGHT, recorded so nobody assumes adoption was a straight upgrade: it already
+ * scrolled instead of squeezing, and it already took its measure from `var(--cf-max-w)` rather
+ * than the `76rem` five of the ten used. What it had lost: the current section was marked in ink
+ * and underline only, where the estate's rule is three channels (the accent alone is unreadable
+ * for a large minority — see the protanopia measurement beside the status hues in `tokens.css`);
+ * the sections were set at `--cf-text-sm`, a step under the bar's own controls; and there was no
+ * `:focus-visible` rule at all, so a keyboard reader got the browser's default outline drawn
+ * OUTSIDE the link and clipped by the scroll container on the first and last item.
+ *
+ * `test/tokens.test.ts` asserts both halves — the shared classes exist, and no `.bw-subnav*`
+ * selector has come back.
+ */
 
 .bw-main {
   max-width: var(--cf-max-w);

@@ -23,6 +23,7 @@ import {
   CookieBanner,
   MainRegion,
   SkipLink,
+  SubNav,
   miningOnHub,
 } from '@cloudsforge/ui'
 import { applyHead, surfaceMeta } from '@cloudsforge/ui/seo'
@@ -82,23 +83,42 @@ export function AppShell({ unregistered = false }: { unregistered?: boolean }) {
         mining={miningOnHub(hosts().hub)}
       />
       {/*
-        The sub-nav is sticky at exactly `var(--cf-bar-h)` — the bar's own height token, not a
-        number copied out of it. When the bar's height changes, this moves with it.
+        The sub-nav is `SubNav` from @cloudsforge/ui and is no longer declared here.
+
+        WHAT IT REPLACES AND WHY. Measured 2026-08-10: ten frontends declared this strip in their
+        own stylesheet under six class prefixes, from what was plainly one original that had been
+        copied and then edited in place — the census is in `ui/packages/ui/src/subnav.test.ts`.
+        This repository's `.bw-subnav` copy was one of the better ones: it already scrolled
+        (`overflow-x: auto` plus `white-space: nowrap`) and it already took its measure from
+        `var(--cf-max-w)`. It had still drifted where a private copy always drifts —
+        `.bw-subnav__link.is-active` marked the current section in ink and underline only, where
+        the estate's standing rule is three channels, and it set the sections at `--cf-text-sm`
+        (14px) while the bar's own controls read at the body step. Both are fixed by adopting
+        rather than by editing a second copy that would drift again.
+
+        The links stay here, and that is the component's own argument: routing is react-router's
+        `NavLink`, which owns the active state, and the design system does not depend on
+        react-router. What moved is the STRIP — the sticky offset at `var(--cf-bar-h)`, the
+        scroll behaviour, the measure and the type.
+
+        The `label` keeps this surface's own wording. Two `<nav>` landmarks with the same
+        accessible name are two landmarks a screen reader user cannot tell apart, so the wording
+        is deliberately per-surface and was not homogenised with the strip.
       */}
-      <nav className="bw-subnav" aria-label="Sections">
-        <div className="bw-subnav__inner">
-          {NAV.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              className={({ isActive }) => `bw-subnav__link${isActive ? ' is-active' : ''}`}
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </div>
-      </nav>
+      <SubNav label="Sections">
+        {NAV.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === '/'}
+            className={({ isActive }) =>
+              `cf-subnav__link${isActive ? ' cf-subnav__link--current' : ''}`
+            }
+          >
+            {item.label}
+          </NavLink>
+        ))}
+      </SubNav>
       <DocumentMeta />
       {/*
         `MainRegion` rather than a hand-written `<main>`: it sets `id={MAIN_ID}` and `tabIndex={-1}`
