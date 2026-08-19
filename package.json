@@ -1,6 +1,6 @@
 {
   "name": "@cloudsforge/beacon-web",
-  "version": "2026.8.81",
+  "version": "2026.8.82",
   "packageManager": "pnpm@11.9.0",
   "private": true,
   "description": "The operator console for micro-beacon: the release gate first, then the journeys, probes, incidents, conformance and error budgets it decides on.",
